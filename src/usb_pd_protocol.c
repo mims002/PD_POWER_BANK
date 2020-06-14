@@ -2129,8 +2129,12 @@ void pd_init(int port)
 #endif
 }
 
-void pd_run_state_machine(int port)
+void pd_run_state_machine(int port, int reset)
 {
+
+  if (reset)
+    pd[port].task_state = PD_STATE_SOFT_RESET;
+
 #ifdef CONFIG_USB_PD_REV30
 	/* send any pending messages */
 	pd_ca_send_pending(port);
