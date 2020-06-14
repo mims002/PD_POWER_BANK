@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include "tcpm_driver.h"
 #include "usb_pd.h"
+#include <Arduino.h>
 
 const int usb_pd_int_pin = 12;
 const int debug_led_pin  = 13;
