@@ -25,6 +25,7 @@ extern "C" {
 #define PD_HOST_COMMAND_TIMEOUT_US SECOND_US
 
 
+
 #ifdef CONFIG_USB_PD_PORT_COUNT
 
 /*

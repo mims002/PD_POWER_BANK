@@ -68,13 +68,16 @@ void loop()
 
   if (LOW == digitalRead(usb_pd_int_pin))
   {
-    // char str[30];
-    // memset(str, ' ', 30);
-    // sprintf(str, "Interrupted\n\n");
-    // usb_serial_write(str, 30);
-
     tcpc_alert(0);
+
+    tcpc_config[0].drv->stored_vbus;
   }
+
+  /* V BUS  */
+  char str[35];
+  memset(str, ' ', 35);
+  sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", *tcpc_config[0].drv->stored_vbus);
+  usb_serial_write(str, 35);
 
   pd_run_state_machine(0, reset);
 
@@ -82,8 +85,6 @@ void loop()
   // My guess is that spamming the I2C bus too fast causes problems
 
   delay(4);
-
- 
 }
 
 void pd_process_source_cap_callback(int port, int cnt, uint32_t *src_caps)
@@ -94,13 +95,13 @@ void pd_process_source_cap_callback(int port, int cnt, uint32_t *src_caps)
 
   uint32_t mv;
   uint32_t ma;
-  uint32_t pdo ;
+  uint32_t pdo;
 
   pd_find_pdo_index(port, PD_MAX_VOLTAGE_MV, &pdo);
   pd_extract_pdo_power(pdo, &ma, &mv);
 
   char str[50];
   memset(str, ' ', 50);
-  sprintf(str, "Source Power %lu : %lu Type: %lu\n\n", mv, ma, *src_caps >>30);
+  sprintf(str, "Source Power %lu : %lu Type: %lu\n\n", mv, ma, *src_caps >> 30);
   usb_serial_write(str, 50);
 }

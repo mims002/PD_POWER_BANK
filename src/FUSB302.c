@@ -18,6 +18,8 @@
 #define PACKET_IS_GOOD_CRC(head) (PD_HEADER_TYPE(head) == PD_CTRL_GOOD_CRC && \
 								  PD_HEADER_CNT(head) == 0)
 
+static int vbus;
+
 static struct fusb302_chip_state
 {
 	int cc_polarity;
@@ -884,11 +886,13 @@ void fusb302_tcpc_alert(int port)
 	if (interrupt & TCPC_REG_INTERRUPT_VBUSOK)
 	{
 
-		/* V BUS  */
-		char str[35];
-		memset(str, ' ', 35);
-		sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", fusb302_tcpm_get_vbus_level(port));
-		usb_serial_write(str, 35);
+		// /* V BUS  */
+		// char str[35];
+		// memset(str, ' ', 35);
+		// sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", fusb302_tcpm_get_vbus_level(port));
+		// usb_serial_write(str, 35);
+
+		vbus =  fusb302_tcpm_get_vbus_level(port);
 
 		
 	}
@@ -980,6 +984,7 @@ const struct tcpm_drv fusb302_tcpm_drv = {
 	.get_cc = &fusb302_tcpm_get_cc,
 #ifdef CONFIG_USB_PD_VBUS_DETECT_TCPC
 	.get_vbus_level = &fusb302_tcpm_get_vbus_level,
+	.stored_vbus= &vbus,
 #endif
 	.select_rp_value = &fusb302_tcpm_select_rp_value,
 	.set_cc = &fusb302_tcpm_set_cc,

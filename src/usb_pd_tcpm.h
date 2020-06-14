@@ -132,7 +132,7 @@ enum tcpc_transmit_complete {
 
 struct tcpm_drv {
 
-
+	int *stored_vbus;
 
 	/**
 	 * Initialize TCPM driver and wait for TCPC readiness.
