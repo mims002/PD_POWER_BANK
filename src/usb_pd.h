@@ -24,7 +24,9 @@ extern "C" {
 /* PD Host command timeout */
 #define PD_HOST_COMMAND_TIMEOUT_US SECOND_US
 
+
 #ifdef CONFIG_USB_PD_PORT_COUNT
+
 /*
  * Define PD_PORT_TO_TASK_ID() and TASK_ID_TO_PD_PORT() macros to
  * go between PD port number and task ID. Assume that TASK_ID_PD_C0 is the
@@ -874,6 +876,7 @@ enum pd_data_msg_type {
 #define PD_REV20 1
 #define PD_REV30 2
 
+
 /* Power role */
 #define PD_ROLE_SINK   0
 #define PD_ROLE_SOURCE 1
@@ -962,7 +965,8 @@ enum pd_data_msg_type {
 /* Voltage threshold to detect connection when presenting Rd */
 #define PD_SNK_VA_MV             250
 
-/* --- Policy layer functions --- */
+
+
 
 /* Request types for pd_build_request() */
 enum pd_request_type {
@@ -1019,6 +1023,9 @@ int pd_is_max_request_allowed(void);
  * @param src_caps Power Data Objects representing the source capabilities.
  */
 void pd_process_source_cap_callback(int port, int cnt, uint32_t *src_caps);
+
+int getLastState(int port);
+/* --- Policy layer functions --- */
 
 /**
  * Process source capabilities packet

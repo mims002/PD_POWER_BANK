@@ -131,6 +131,9 @@ enum tcpc_transmit_complete {
 };
 
 struct tcpm_drv {
+
+
+
 	/**
 	 * Initialize TCPM driver and wait for TCPC readiness.
 	 *

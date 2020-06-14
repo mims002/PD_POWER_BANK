@@ -16,6 +16,8 @@ extern "C" {
 #include "usb_pd_tcpm.h"
 #include "usb_pd.h"
 
+#define CONFIG_USB_PD_VBUS_DETECT_TCPC
+
 /* Chip Device ID - 302A or 302B */
 #define fusb302_DEVID_302A 0x08
 #define fusb302_DEVID_302B 0x09

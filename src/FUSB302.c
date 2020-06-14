@@ -10,11 +10,16 @@
 #include "tcpm.h"
 #include "usb_pd.h"
 #include "platform.h"
+#include <usb_serial.h>
+#include <stdio.h>
+#include <string.h>
+#include <stddef.h>
 
 #define PACKET_IS_GOOD_CRC(head) (PD_HEADER_TYPE(head) == PD_CTRL_GOOD_CRC && \
-				 PD_HEADER_CNT(head) == 0)
+								  PD_HEADER_CNT(head) == 0)
 
-static struct fusb302_chip_state {
+static struct fusb302_chip_state
+{
 	int cc_polarity;
 	int vconn_enabled;
 	/* 1 = pulling up (DFP) 0 = pulling down (UFP) */
@@ -61,7 +66,7 @@ static void fusb302_auto_goodcrc_enable(int port, int enable)
 {
 	int reg;
 
-	tcpc_read(port,	TCPC_REG_SWITCHES1, &reg);
+	tcpc_read(port, TCPC_REG_SWITCHES1, &reg);
 
 	if (enable)
 		reg |= TCPC_REG_SWITCHES1_AUTO_GCRC;
@@ -77,12 +82,15 @@ static int convert_bc_lvl(int port, int bc_lvl)
 	/* assume OPEN unless one of the following conditions is true... */
 	int ret = TYPEC_CC_VOLT_OPEN;
 
-	if (state[port].pulling_up) {
+	if (state[port].pulling_up)
+	{
 		if (bc_lvl == 0x00)
 			ret = TYPEC_CC_VOLT_RA;
 		else if (bc_lvl < 0x3)
 			ret = TYPEC_CC_VOLT_RD;
-	} else {
+	}
+	else
+	{
 		if (bc_lvl == 0x1)
 			ret = TYPEC_CC_VOLT_SNK_DEF;
 		else if (bc_lvl == 0x2)
@@ -99,7 +107,7 @@ static int measure_cc_pin_source(int port, int cc_measure)
 	int switches0_reg;
 	int reg;
 	int cc_lvl;
-	
+
 	/* Read status register */
 	tcpc_read(port, TCPC_REG_SWITCHES0, &reg);
 	/* Save current value */
@@ -130,7 +138,8 @@ static int measure_cc_pin_source(int port, int cc_measure)
 	cc_lvl = TYPEC_CC_VOLT_OPEN;
 
 	/* CC level is below the 'no connect' threshold (vOpen) */
-	if ((reg & TCPC_REG_STATUS0_COMP) == 0) {
+	if ((reg & TCPC_REG_STATUS0_COMP) == 0)
+	{
 		/* Set MDAC for Rd vs Ra comparison */
 		tcpc_write(port, TCPC_REG_MEASURE, state[port].mdac_rd);
 
@@ -141,12 +150,12 @@ static int measure_cc_pin_source(int port, int cc_measure)
 		tcpc_read(port, TCPC_REG_STATUS0, &reg);
 
 		cc_lvl = (reg & TCPC_REG_STATUS0_COMP) ? TYPEC_CC_VOLT_RD
-						       : TYPEC_CC_VOLT_RA;
+											   : TYPEC_CC_VOLT_RA;
 	}
 
 	/* Restore SWITCHES0 register to its value prior */
 	tcpc_write(port, TCPC_REG_SWITCHES0, switches0_reg);
-	
+
 	return cc_lvl;
 }
 
@@ -156,18 +165,20 @@ static void detect_cc_pin_source_manual(int port, int *cc1_lvl, int *cc2_lvl)
 	int cc1_measure = TCPC_REG_SWITCHES0_MEAS_CC1;
 	int cc2_measure = TCPC_REG_SWITCHES0_MEAS_CC2;
 
-	if (state[port].vconn_enabled) {
+	if (state[port].vconn_enabled)
+	{
 		/* If VCONN enabled, measure cc_pin that matches polarity */
 		if (state[port].cc_polarity)
 			*cc2_lvl = measure_cc_pin_source(port, cc2_measure);
 		else
 			*cc1_lvl = measure_cc_pin_source(port, cc1_measure);
-	} else {
+	}
+	else
+	{
 		/* If VCONN not enabled, measure both cc1 and cc2 */
 		*cc1_lvl = measure_cc_pin_source(port, cc1_measure);
 		*cc2_lvl = measure_cc_pin_source(port, cc2_measure);
 	}
-
 }
 
 /* Determine cc pin state for sink */
@@ -178,7 +189,7 @@ static void detect_cc_pin_sink(int port, int *cc1, int *cc2)
 	int orig_meas_cc2;
 	int bc_lvl_cc1;
 	int bc_lvl_cc2;
-	
+
 	/*
 	 * Measure CC1 first.
 	 */
@@ -194,7 +205,6 @@ static void detect_cc_pin_sink(int port, int *cc1, int *cc2)
 		orig_meas_cc2 = 1;
 	else
 		orig_meas_cc2 = 0;
-
 
 	/* Disable CC2 measurement switch, enable CC1 measurement switch */
 	reg &= ~TCPC_REG_SWITCHES0_MEAS_CC2;
@@ -249,7 +259,6 @@ static void detect_cc_pin_sink(int port, int *cc1, int *cc2)
 		reg &= ~TCPC_REG_SWITCHES0_MEAS_CC2;
 
 	tcpc_write(port, TCPC_REG_SWITCHES0, reg);
-	
 }
 
 /* Parse header bytes for the size of packet */
@@ -270,7 +279,7 @@ static int get_num_bytes(uint16_t header)
 }
 
 static int fusb302_send_message(int port, uint16_t header, const uint32_t *data,
-				 uint8_t *buf, int buf_pos)
+								uint8_t *buf, int buf_pos)
 {
 	int rv;
 	int reg;
@@ -326,14 +335,15 @@ static int fusb302_tcpm_select_rp_value(int port, int rp)
 	int reg;
 	int rv;
 	uint8_t vnc, rd;
-	
+
 	rv = tcpc_read(port, TCPC_REG_CONTROL0, &reg);
 	if (rv)
 		return rv;
 
 	/* Set the current source for Rp value */
 	reg &= ~TCPC_REG_CONTROL0_HOST_CUR_MASK;
-	switch (rp) {
+	switch (rp)
+	{
 	case TYPEC_RP_1A5:
 		reg |= TCPC_REG_CONTROL0_HOST_CUR_1A5;
 		vnc = TCPC_REG_MEASURE_MDAC_MV(PD_SRC_1_5_VNC_MV);
@@ -353,7 +363,7 @@ static int fusb302_tcpm_select_rp_value(int port, int rp)
 	state[port].mdac_vnc = vnc;
 	state[port].mdac_rd = rd;
 	rv = tcpc_write(port, TCPC_REG_CONTROL0, reg);
-		
+
 	return rv;
 }
 
@@ -370,15 +380,14 @@ static int fusb302_tcpm_init(int port)
 	state[port].mdac_rd = TCPC_REG_MEASURE_MDAC_MV(PD_SRC_DEF_RD_THRESH_MV);
 
 	/* all other variables assumed to default to 0 */
-	
+
 	/* Restore default settings */
 	tcpc_write(port, TCPC_REG_RESET, TCPC_REG_RESET_SW_RESET);
 
 	/* Turn on retries and set number of retries */
 	tcpc_read(port, TCPC_REG_CONTROL3, &reg);
 	reg |= TCPC_REG_CONTROL3_AUTO_RETRY;
-	reg |= (PD_RETRY_COUNT & 0x3) <<
-		TCPC_REG_CONTROL3_N_RETRIES_POS;
+	reg |= (PD_RETRY_COUNT & 0x3) << TCPC_REG_CONTROL3_N_RETRIES_POS;
 	tcpc_write(port, TCPC_REG_CONTROL3, reg);
 
 	/* Create interrupt masks */
@@ -418,12 +427,12 @@ static int fusb302_tcpm_init(int port)
 	tcpm_set_polarity(port, 0);
 	tcpm_set_vconn(port, 0);
 
-    fusb302_auto_goodcrc_enable(port, 0);
+	fusb302_auto_goodcrc_enable(port, 0);
 
 	/* Turn on the power! */
 	/* TODO: Reduce power consumption */
 	tcpc_write(port, TCPC_REG_POWER, TCPC_REG_POWER_PWR_ALL);
-	
+
 	return 0;
 }
 
@@ -434,10 +443,13 @@ static int fusb302_tcpm_release(int port)
 
 static int fusb302_tcpm_get_cc(int port, int *cc1, int *cc2)
 {
-	if (state[port].pulling_up) {
+	if (state[port].pulling_up)
+	{
 		/* Source mode? */
 		detect_cc_pin_source_manual(port, cc1, cc2);
-	} else {
+	}
+	else
+	{
 		/* Sink mode? */
 		detect_cc_pin_sink(port, cc1, cc2);
 	}
@@ -448,28 +460,27 @@ static int fusb302_tcpm_get_cc(int port, int *cc1, int *cc2)
 static int fusb302_tcpm_set_cc(int port, int pull)
 {
 	int reg;
-	
+
 	/* NOTE: FUSB302 toggles a single pull-up between CC1 and CC2 */
 	/* NOTE: FUSB302 Does not support Ra. */
-	switch (pull) {
+	switch (pull)
+	{
 	case TYPEC_CC_RP:
 		/* enable the pull-up we know to be necessary */
 		tcpc_read(port, TCPC_REG_SWITCHES0, &reg);
 
 		reg &= ~(TCPC_REG_SWITCHES0_CC2_PU_EN |
-			 TCPC_REG_SWITCHES0_CC1_PU_EN |
-			 TCPC_REG_SWITCHES0_CC1_PD_EN |
-			 TCPC_REG_SWITCHES0_CC2_PD_EN |
-			 TCPC_REG_SWITCHES0_VCONN_CC1 |
-			 TCPC_REG_SWITCHES0_VCONN_CC2);
+				 TCPC_REG_SWITCHES0_CC1_PU_EN |
+				 TCPC_REG_SWITCHES0_CC1_PD_EN |
+				 TCPC_REG_SWITCHES0_CC2_PD_EN |
+				 TCPC_REG_SWITCHES0_VCONN_CC1 |
+				 TCPC_REG_SWITCHES0_VCONN_CC2);
 
 		reg |= TCPC_REG_SWITCHES0_CC1_PU_EN |
-			TCPC_REG_SWITCHES0_CC2_PU_EN;
+			   TCPC_REG_SWITCHES0_CC2_PU_EN;
 
 		if (state[port].vconn_enabled)
-			reg |= state[port].cc_polarity ?
-			       TCPC_REG_SWITCHES0_VCONN_CC1 :
-			       TCPC_REG_SWITCHES0_VCONN_CC2;
+			reg |= state[port].cc_polarity ? TCPC_REG_SWITCHES0_VCONN_CC1 : TCPC_REG_SWITCHES0_VCONN_CC2;
 
 		tcpc_write(port, TCPC_REG_SWITCHES0, reg);
 
@@ -514,7 +525,7 @@ static int fusb302_tcpm_set_cc(int port, int pull)
 		/* Unsupported... */
 		return EC_ERROR_UNIMPLEMENTED;
 	}
-		
+
 	return 0;
 }
 
@@ -522,14 +533,15 @@ static int fusb302_tcpm_set_polarity(int port, int polarity)
 {
 	/* Port polarity : 0 => CC1 is CC line, 1 => CC2 is CC line */
 	int reg;
-	
+
 	tcpc_read(port, TCPC_REG_SWITCHES0, &reg);
 
 	/* clear VCONN switch bits */
 	reg &= ~TCPC_REG_SWITCHES0_VCONN_CC1;
 	reg &= ~TCPC_REG_SWITCHES0_VCONN_CC2;
 
-	if (state[port].vconn_enabled) {
+	if (state[port].vconn_enabled)
+	{
 		/* set VCONN switch to be non-CC line */
 		if (polarity)
 			reg |= TCPC_REG_SWITCHES0_VCONN_CC1;
@@ -565,7 +577,7 @@ static int fusb302_tcpm_set_polarity(int port, int polarity)
 
 	/* Save the polarity for later */
 	state[port].cc_polarity = polarity;
-	
+
 	return 0;
 }
 
@@ -584,11 +596,14 @@ static int fusb302_tcpm_set_vconn(int port, int enable)
 	/* save enable state for later use */
 	state[port].vconn_enabled = enable;
 
-	if (enable) {
+	if (enable)
+	{
 		/* set to saved polarity */
 		tcpm_set_polarity(port, state[port].cc_polarity);
-	} else {
-		
+	}
+	else
+	{
+
 		tcpc_read(port, TCPC_REG_SWITCHES0, &reg);
 
 		/* clear VCONN switch bits */
@@ -616,7 +631,7 @@ static int fusb302_tcpm_set_msg_header(int port, int power_role, int data_role)
 		reg |= TCPC_REG_SWITCHES1_DATAROLE;
 
 	tcpc_write(port, TCPC_REG_SWITCHES1, reg);
-	
+
 	return 0;
 }
 
@@ -625,7 +640,7 @@ static int fusb302_tcpm_set_rx_enable(int port, int enable)
 	int reg;
 
 	state[port].rx_enable = enable;
-	
+
 	/* Get current switch state */
 	tcpc_read(port, TCPC_REG_SWITCHES0, &reg);
 
@@ -633,8 +648,10 @@ static int fusb302_tcpm_set_rx_enable(int port, int enable)
 	reg &= ~TCPC_REG_SWITCHES0_MEAS_CC1;
 	reg &= ~TCPC_REG_SWITCHES0_MEAS_CC2;
 
-	if (enable) {
-		switch (state[port].cc_polarity) {
+	if (enable)
+	{
+		switch (state[port].cc_polarity)
+		{
 		/* if CC polarity hasnt been determined, can't enable */
 		case -1:
 			return EC_ERROR_UNKNOWN;
@@ -653,19 +670,19 @@ static int fusb302_tcpm_set_rx_enable(int port, int enable)
 		/* Disable BC_LVL interrupt when enabling PD comm */
 		if (!tcpc_read(port, TCPC_REG_MASK, &reg))
 			tcpc_write(port, TCPC_REG_MASK,
-				   reg | TCPC_REG_MASK_BC_LVL);
+					   reg | TCPC_REG_MASK_BC_LVL);
 
 		/* flush rx fifo in case messages have been coming our way */
 		fusb302_flush_rx_fifo(port);
-
-
-	} else {
+	}
+	else
+	{
 		tcpc_write(port, TCPC_REG_SWITCHES0, reg);
 
 		/* Enable BC_LVL interrupt when disabling PD comm */
 		if (!tcpc_read(port, TCPC_REG_MASK, &reg))
 			tcpc_write(port, TCPC_REG_MASK,
-				   reg & ~TCPC_REG_MASK_BC_LVL);
+					   reg & ~TCPC_REG_MASK_BC_LVL);
 	}
 
 	fusb302_auto_goodcrc_enable(port, enable);
@@ -679,8 +696,8 @@ static int fusb302_rx_fifo_is_empty(int port)
 	int reg, ret;
 
 	ret = (!tcpc_read(port, TCPC_REG_STATUS1, &reg)) &&
-	       (reg & TCPC_REG_STATUS1_RX_EMPTY);
-		   		   
+		  (reg & TCPC_REG_STATUS1_RX_EMPTY);
+
 	return ret;
 }
 
@@ -702,7 +719,8 @@ static int fusb302_tcpm_get_message(int port, uint32_t *payload, int *head)
 		return EC_ERROR_UNKNOWN;
 
 	/* Read until we have a non-GoodCRC packet or an empty FIFO */
-	do {
+	do
+	{
 		buf[0] = TCPC_REG_FIFOS;
 
 		/*
@@ -732,12 +750,13 @@ static int fusb302_tcpm_get_message(int port, uint32_t *payload, int *head)
 		 * No START, but do issue a STOP at the end.
 		 * add 4 to len to read CRC out
 		 */
-		rv |= tcpc_xfer(port, 0, 0, buf, len+4, I2C_XFER_STOP);
+		rv |= tcpc_xfer(port, 0, 0, buf, len + 4, I2C_XFER_STOP);
 
 	} while (!rv && PACKET_IS_GOOD_CRC(*head) &&
-		 !fusb302_rx_fifo_is_empty(port));
+			 !fusb302_rx_fifo_is_empty(port));
 
-	if (!rv) {
+	if (!rv)
+	{
 		/* Discard GoodCRC packets */
 		if (PACKET_IS_GOOD_CRC(*head))
 			rv = EC_ERROR_UNKNOWN;
@@ -756,7 +775,7 @@ static int fusb302_tcpm_get_message(int port, uint32_t *payload, int *head)
 }
 
 static int fusb302_tcpm_transmit(int port, enum tcpm_transmit_type type,
-				 uint16_t header, const uint32_t *data)
+								 uint16_t header, const uint32_t *data)
 {
 	/*
 	 * this is the buffer that will be burst-written into the fusb302
@@ -780,7 +799,8 @@ static int fusb302_tcpm_transmit(int port, enum tcpm_transmit_type type,
 	/* Flush the TXFIFO */
 	fusb302_flush_tx_fifo(port);
 
-	switch (type) {
+	switch (type)
+	{
 	case TCPC_TX_SOP:
 
 		/* put register address first for of burst tcpc write */
@@ -793,10 +813,10 @@ static int fusb302_tcpm_transmit(int port, enum tcpm_transmit_type type,
 		buf[buf_pos++] = fusb302_TKN_SYNC2;
 
 		fusb302_send_message(port, header, data, buf, buf_pos);
-	    // wait for the GoodCRC to come back before we let the rest
-	    // of the code do stuff like change polarity and miss it
-	    delayMicroseconds(1200);
-	    return 0;
+		// wait for the GoodCRC to come back before we let the rest
+		// of the code do stuff like change polarity and miss it
+		delayMicroseconds(1200);
+		return 0;
 	case TCPC_TX_HARD_RESET:
 		/* Simply hit the SEND_HARD_RESET bit */
 		tcpc_read(port, TCPC_REG_CONTROL3, &reg);
@@ -820,7 +840,7 @@ static int fusb302_tcpm_transmit(int port, enum tcpm_transmit_type type,
 		tcpc_read(port, TCPC_REG_CONTROL1, &reg);
 		reg &= ~TCPC_REG_CONTROL1_BIST_MODE2;
 		tcpc_write(port, TCPC_REG_CONTROL1, reg);
-		
+
 		break;
 	default:
 		return EC_ERROR_UNIMPLEMENTED;
@@ -861,30 +881,47 @@ void fusb302_tcpc_alert(int port)
 	if (state[port].rx_enable)
 		interrupt &= ~TCPC_REG_INTERRUPT_BC_LVL;
 
-	if (interrupt & TCPC_REG_INTERRUPT_BC_LVL) {
+	if (interrupt & TCPC_REG_INTERRUPT_VBUSOK)
+	{
+
+		/* V BUS  */
+		char str[35];
+		memset(str, ' ', 35);
+		sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", fusb302_tcpm_get_vbus_level(port));
+		usb_serial_write(str, 35);
+
+		
+	}
+
+	if (interrupt & TCPC_REG_INTERRUPT_BC_LVL)
+	{
 		/* CC Status change */
 		//task_set_event(PD_PORT_TO_TASK_ID(port), PD_EVENT_CC, 0);
 	}
 
-	if (interrupt & TCPC_REG_INTERRUPT_COLLISION) {
+	if (interrupt & TCPC_REG_INTERRUPT_COLLISION)
+	{
 		/* packet sending collided */
 		pd_transmit_complete(port, TCPC_TX_COMPLETE_FAILED);
 	}
 
 	/* GoodCRC was received, our FIFO is now non-empty */
-	if (interrupta & TCPC_REG_INTERRUPTA_TX_SUCCESS) {
+	if (interrupta & TCPC_REG_INTERRUPTA_TX_SUCCESS)
+	{
 		//task_set_event(PD_PORT_TO_TASK_ID(port),
 		//		PD_EVENT_RX, 0);
 
 		pd_transmit_complete(port, TCPC_TX_COMPLETE_SUCCESS);
 	}
 
-	if (interrupta & TCPC_REG_INTERRUPTA_RETRYFAIL) {
+	if (interrupta & TCPC_REG_INTERRUPTA_RETRYFAIL)
+	{
 		/* all retries have failed to get a GoodCRC */
 		pd_transmit_complete(port, TCPC_TX_COMPLETE_FAILED);
 	}
 
-	if (interrupta & TCPC_REG_INTERRUPTA_HARDSENT) {
+	if (interrupta & TCPC_REG_INTERRUPTA_HARDSENT)
+	{
 		/* hard reset has been sent */
 
 		/* bring FUSB302 out of reset */
@@ -893,7 +930,8 @@ void fusb302_tcpc_alert(int port)
 		pd_transmit_complete(port, TCPC_TX_COMPLETE_SUCCESS);
 	}
 
-	if (interrupta & TCPC_REG_INTERRUPTA_HARDRESET) {
+	if (interrupta & TCPC_REG_INTERRUPTA_HARDRESET)
+	{
 		/* hard reset has been received */
 
 		/* bring FUSB302 out of reset */
@@ -904,13 +942,17 @@ void fusb302_tcpc_alert(int port)
 		//task_wake(PD_PORT_TO_TASK_ID(port));
 	}
 
-	if (interruptb & TCPC_REG_INTERRUPTB_GCRCSENT) {
+	if (interruptb & TCPC_REG_INTERRUPTB_GCRCSENT)
+	{
 		/* Packet received and GoodCRC sent */
 		/* (this interrupt fires after the GoodCRC finishes) */
-		if (state[port].rx_enable) {
+		if (state[port].rx_enable)
+		{
 			//task_set_event(PD_PORT_TO_TASK_ID(port),
 			//		PD_EVENT_RX, 0);
-		} else {
+		}
+		else
+		{
 			/* flush rx fifo if rx isn't enabled */
 			fusb302_flush_rx_fifo(port);
 		}
@@ -921,7 +963,7 @@ void fusb302_tcpc_alert(int port)
 void tcpm_set_bist_test_data(int port)
 {
 	int reg;
-	
+
 	/* Read control3 register */
 	tcpc_read(port, TCPC_REG_CONTROL3, &reg);
 
@@ -933,19 +975,19 @@ void tcpm_set_bist_test_data(int port)
 }
 
 const struct tcpm_drv fusb302_tcpm_drv = {
-	.init			= &fusb302_tcpm_init,
-	.release		= &fusb302_tcpm_release,
-	.get_cc			= &fusb302_tcpm_get_cc,
+	.init = &fusb302_tcpm_init,
+	.release = &fusb302_tcpm_release,
+	.get_cc = &fusb302_tcpm_get_cc,
 #ifdef CONFIG_USB_PD_VBUS_DETECT_TCPC
-	.get_vbus_level		= &fusb302_tcpm_get_vbus_level,
+	.get_vbus_level = &fusb302_tcpm_get_vbus_level,
 #endif
-	.select_rp_value	= &fusb302_tcpm_select_rp_value,
-	.set_cc			= &fusb302_tcpm_set_cc,
-	.set_polarity		= &fusb302_tcpm_set_polarity,
-	.set_vconn		= &fusb302_tcpm_set_vconn,
-	.set_msg_header		= &fusb302_tcpm_set_msg_header,
-	.set_rx_enable		= &fusb302_tcpm_set_rx_enable,
-	.get_message		= &fusb302_tcpm_get_message,
-	.transmit		= &fusb302_tcpm_transmit,
-	.tcpc_alert		= &fusb302_tcpc_alert,
+	.select_rp_value = &fusb302_tcpm_select_rp_value,
+	.set_cc = &fusb302_tcpm_set_cc,
+	.set_polarity = &fusb302_tcpm_set_polarity,
+	.set_vconn = &fusb302_tcpm_set_vconn,
+	.set_msg_header = &fusb302_tcpm_set_msg_header,
+	.set_rx_enable = &fusb302_tcpm_set_rx_enable,
+	.get_message = &fusb302_tcpm_get_message,
+	.transmit = &fusb302_tcpm_transmit,
+	.tcpc_alert = &fusb302_tcpc_alert,
 };
