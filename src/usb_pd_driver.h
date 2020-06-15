@@ -32,11 +32,11 @@ extern "C" {
 #define CONFIG_USB_PD_PULLUP TYPEC_RP_USB
 
 /* Override PD_ROLE_DEFAULT in usb_pd.h */
-#define PD_ROLE_DEFAULT(port) (PD_ROLE_SINK)
+#define PD_ROLE_DEFAULT(port) (PD_ROLE_SINK )
 
 /* Don't automatically change roles */
 #undef CONFIG_USB_PD_INITIAL_DRP_STATE
-#define CONFIG_USB_PD_INITIAL_DRP_STATE PD_DRP_FREEZE
+#define CONFIG_USB_PD_INITIAL_DRP_STATE PD_DRP_TOGGLE_ON
 
 /* board specific type-C power constants */
 /*

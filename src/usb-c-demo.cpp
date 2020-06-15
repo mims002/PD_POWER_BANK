@@ -39,7 +39,8 @@ void loop()
   int reset = 0;
   pushbutton_current_state = digitalRead(pushbutton_pin);
   pushbutton_current_time = millis();
-  if (((pushbutton_current_time - pushbutton_last_time) > 5000))
+
+  if (((pushbutton_current_time - pushbutton_last_time) > 5000) && getLastState(0) <= 8 && *tcpc_config[0].drv->stored_vbus ==1)
   {
     if (debug_led_current_state)
     {
@@ -70,14 +71,13 @@ void loop()
   {
     tcpc_alert(0);
 
-    tcpc_config[0].drv->stored_vbus;
   }
 
-  /* V BUS  */
-  char str[35];
-  memset(str, ' ', 35);
-  sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", *tcpc_config[0].drv->stored_vbus);
-  usb_serial_write(str, 35);
+  // /* V BUS  */
+  // char str[35];
+  // memset(str, ' ', 35);
+  // sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", *tcpc_config[0].drv->stored_vbus);
+  // usb_serial_write(str, 35);
 
   pd_run_state_machine(0, reset);
 
@@ -102,6 +102,8 @@ void pd_process_source_cap_callback(int port, int cnt, uint32_t *src_caps)
 
   char str[50];
   memset(str, ' ', 50);
-  sprintf(str, "Source Power %lu : %lu Type: %lu\n\n", mv, ma, *src_caps >> 30);
+  sprintf(str, "Source Power %lu : %lu Type: %lu\n\n", mv, ma, ((*(src_caps+cnt-1) >> 10) & 0x3FF) *50);
   usb_serial_write(str, 50);
+
+  
 }

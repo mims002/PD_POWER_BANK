@@ -886,13 +886,15 @@ void fusb302_tcpc_alert(int port)
 	if (interrupt & TCPC_REG_INTERRUPT_VBUSOK)
 	{
 
-		// /* V BUS  */
-		// char str[35];
-		// memset(str, ' ', 35);
-		// sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", fusb302_tcpm_get_vbus_level(port));
-		// usb_serial_write(str, 35);
-
 		vbus =  fusb302_tcpm_get_vbus_level(port);
+
+		/* V BUS  */
+		char str[35];
+		memset(str, ' ', 35);
+		sprintf(str, "\n\n\nConnected Vbus: %d\n\n\n", vbus);
+		usb_serial_write(str, 35);
+
+		
 
 		
 	}
