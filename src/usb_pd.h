@@ -15,6 +15,9 @@
 extern "C" {
 #endif
 
+
+
+
 /* Time units in microseconds */
 #define MSEC_US         (1000ul)
 #define SECOND_US    (1000000ul)
@@ -195,7 +198,18 @@ enum pd_rx_errors {
 #define PD_T_VDM_E_MODE        (25*MSEC_US) /* enter/exit the same max */
 #define PD_T_VDM_RCVR_RSP      (15*MSEC_US) /* max of 15ms */
 #define PD_T_VDM_SNDR_RSP      (30*MSEC_US) /* max of 30ms */
-#define PD_T_VDM_WAIT_MODE_E  (100*MSEC_US) /* enter/exit the same max */
+#define PD_T_VDM_WAIT_MODE_E  (100*MSEC_US) /* enter/exit the same max */\
+
+struct usb_pd_ob
+{
+	int mode;
+	uint32_t max_ma;
+	uint32_t supply_voltage;
+	uint32_t *src_caps;
+	int src_cap_cnt;
+	int src_cap_curr;
+
+};
 
 /* function table for entered mode */
 struct amode_fx {
@@ -1109,7 +1123,7 @@ int pd_board_check_request(uint32_t rdo, int pdo_cnt);
  *
  * param idx index of the new voltage in the source PDO table.
  */
-void pd_transition_voltage(int idx);
+void pd_transition_voltage(int port, int idx);
 
 /**
  * Go back to the default/safe state of the power supply

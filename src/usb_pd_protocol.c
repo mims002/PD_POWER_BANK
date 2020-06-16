@@ -143,7 +143,7 @@ enum vdm_states
 	VDM_STATE_WAIT_RSP_BUSY = 3,
 };
 
-static struct pd_protocol
+struct pd_protocol
 {
 	/* current port power role (SOURCE or SINK) */
 	uint8_t power_role;
@@ -942,6 +942,11 @@ static void handle_vdm_request(int port, int cnt, uint32_t *payload)
 
 void pd_execute_hard_reset(int port)
 {
+	char str[30];
+	memset(str, ' ', 30);
+	sprintf(str, "Hard Reset\n\n");
+	usb_serial_write(str, 30);
+
 	if (pd[port].last_state == PD_STATE_HARD_RESET_SEND)
 		CPRINTF("C%d HARD RST TX\n", port);
 	else
@@ -1006,6 +1011,12 @@ static void execute_soft_reset(int port)
 void pd_soft_reset(void)
 {
 	int i;
+
+	char str[30];
+	memset(str, ' ', 30);
+	sprintf(str, "Soft reset\n\n");
+	usb_serial_write(str, 30);
+
 
 	for (i = 0; i < CONFIG_USB_PD_PORT_COUNT; ++i)
 		if (pd_is_connected(i))
@@ -2360,15 +2371,6 @@ void pd_run_state_machine(int port, int reset)
 	this_state = pd[port].task_state;
 	timeout = 500 * MSEC_US;
 
-	if (pd[port].task_state != pd[port].last_state)
-	{
-
-		char str[20];
-		memset(str, ' ', 20);
-		sprintf(str, "Current state: %d\n\n", pd[port].task_state);
-		usb_serial_write(str, 20);
-	}
-
 	switch (this_state)
 	{
 	case PD_STATE_DISABLED:
@@ -2650,7 +2652,7 @@ void pd_run_state_machine(int port, int reset)
 		/* Switch to the new requested voltage */
 		if (pd[port].last_state != pd[port].task_state)
 		{
-			pd_transition_voltage(pd[port].requested_idx);
+			pd_transition_voltage(port, pd[port].requested_idx);
 			set_state_timeout(
 				port,
 				get_time().val +

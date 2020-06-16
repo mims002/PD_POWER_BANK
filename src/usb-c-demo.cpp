@@ -4,29 +4,33 @@
 #include <Arduino.h>
 
 const int PROGMEM usb_pd_int_pin = 20;
-const int PROGMEM debug_led_pin = 13;
-const int PROGMEM pushbutton_pin = 2;
-int pushbutton_last_state, pushbutton_current_state, pushbutton_last_time, pushbutton_current_time;
+
+struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
+
 int debug_led_current_state = 0;
-int pd_source_cap_current_index = 0, pd_source_cap_max_index = 0;
+
+int pd_source_cap_current_index = 0;
+
+char str[30];
 
 // USB-C Specific - TCPM start 1
 const struct tcpc_config_t tcpc_config[CONFIG_USB_PD_PORT_COUNT] = {
     {0, fusb302_I2C_SLAVE_ADDR, &fusb302_tcpm_drv},
 };
-// USB-C Specific - TCPM end 1
+
+int last_time = 0;
+int dsp_interval = 0;
+int voltage[] = {5000, 8000, 1200, 15000, 19000};
+int selected = 0;
 
 void setup()
 {
   pinMode(usb_pd_int_pin, INPUT_PULLUP);
-  pinMode(debug_led_pin, OUTPUT);
-  pinMode(pushbutton_pin, INPUT_PULLUP);
-  pushbutton_last_state = 1;
-  pushbutton_last_time = 0;
-  digitalWrite(debug_led_pin, LOW);
 
   Wire.begin();
   Wire.setClock(100000);
+
+  pd_set_max_voltage(voltage[0]);
 
   tcpm_init(0);
   delay(50);
@@ -37,40 +41,43 @@ void setup()
 void loop()
 {
   int reset = 0;
-  pushbutton_current_state = digitalRead(pushbutton_pin);
-  pushbutton_current_time = millis();
 
-  if (((pushbutton_current_time - pushbutton_last_time) > 5000) && getLastState(0) <= 8 && *tcpc_config[0].drv->stored_vbus ==1)
+  if (millis() - dsp_interval >5000)
   {
-    if (debug_led_current_state)
-    {
-      digitalWrite(debug_led_pin, LOW);
-      debug_led_current_state = 0;
-    }
-    else
-    {
-      digitalWrite(debug_led_pin, HIGH);
-      debug_led_current_state = 1;
-    }
-    if (pd_source_cap_current_index < pd_source_cap_max_index)
-    {
-      pd_source_cap_current_index++;
-    }
-    else
-    {
-      pd_source_cap_current_index = 0;
-    }
-    //pd[0].task_state = PD_STATE_SOFT_RESET);
-    reset = 1;
 
-    pushbutton_last_time = pushbutton_current_time;
+    memset(str, ' ', 30);
+    sprintf(str, "Voltage: %lu Current: %lu\n\n", usb_pd_ob1[0].supply_voltage, usb_pd_ob1[0].max_ma);
+    usb_serial_write(str, 30);
+    dsp_interval = millis();
+
+    memset(str, ' ', 30);
+    sprintf(str, "Mode: %d\n\n",usb_pd_ob1[0].mode);
+    usb_serial_write(str, 30);
+
+    memset(str, ' ', 30);
+    sprintf(str, "Current state: %d\n\n", getLastState(0));
+    usb_serial_write(str, 30);
   }
-  pushbutton_last_state = pushbutton_current_state;
+
+  // if (millis() - last_time > 5000 && usb_pd_ob1[0].input)
+  // {
+
+  //   memset(str, ' ', 30);
+  //   sprintf(str, "Requested Voltage: %lu\n\n", voltage[selected]);
+  //   usb_serial_write(str, 30);
+  //   dsp_interval = millis();
+
+  //   last_time = millis();
+  //   pd_set_max_voltage(voltage[selected++]);
+
+  //   if (selected > sizeof(selected)/sizeof(int))
+  //     selected = 0;
+  //   reset = 1;
+  // }
 
   if (LOW == digitalRead(usb_pd_int_pin))
   {
     tcpc_alert(0);
-
   }
 
   // /* V BUS  */
@@ -91,19 +98,16 @@ void pd_process_source_cap_callback(int port, int cnt, uint32_t *src_caps)
 {
 
   //digitalWrite(debug_led_pin, HIGH);
-  pd_source_cap_max_index = cnt - 1;
+  usb_pd_ob1[port].src_cap_curr = cnt - 1;
+  usb_pd_ob1[port].src_cap_cnt = cnt;
+  usb_pd_ob1[port].src_caps = src_caps;
 
   uint32_t mv;
   uint32_t ma;
-  uint32_t pdo;
 
-  pd_find_pdo_index(port, PD_MAX_VOLTAGE_MV, &pdo);
-  pd_extract_pdo_power(pdo, &ma, &mv);
+  pd_extract_pdo_power(*(src_caps + cnt - 1), &ma, &mv);
 
-  char str[50];
-  memset(str, ' ', 50);
-  sprintf(str, "Source Power %lu : %lu Type: %lu\n\n", mv, ma, ((*(src_caps+cnt-1) >> 10) & 0x3FF) *50);
-  usb_serial_write(str, 50);
-
-  
+  // memset(str, ' ', 30);
+  // sprintf(str, "Source Power %lu : %lu\n\n", mv, ma);
+  // usb_serial_write(str, 30);
 }

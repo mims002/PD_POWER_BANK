@@ -3,11 +3,16 @@
  *
  * Created: 11/11/2017 23:55:12
  *  Author: jason
- */ 
+ */
 
 #include "usb_pd_driver.h"
 #include "usb_pd.h"
 #include "Arduino.h"
+#include <usb_serial.h>
+#include <stdio.h>
+
+#include <stddef.h>
+#include <string.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(t) (sizeof(t) / sizeof(t[0]))
@@ -16,21 +21,26 @@
 extern struct tc_module tc_instance;
 extern uint32_t g_us_timestamp_upper_32bit;
 
+struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
+
 uint32_t pd_task_set_event(uint32_t event, int wait_for_reply)
 {
 	switch (event)
 	{
-		case PD_EVENT_TX:
-			break;
-		default:
-			break;
+	case PD_EVENT_TX:
+		break;
+	default:
+		break;
 	}
 	return 0;
 }
 
 const uint32_t PROGMEM pd_src_pdo[] = {
 	PDO_FIXED(5000, 500, PDO_FIXED_FLAGS),
+
+
 };
+
 const int PROGMEM pd_src_pdo_cnt = ARRAY_SIZE(pd_src_pdo);
 
 const uint32_t PROGMEM pd_snk_pdo[] = {
@@ -42,9 +52,17 @@ const uint32_t PROGMEM pd_snk_pdo[] = {
 const int PROGMEM pd_snk_pdo_cnt = ARRAY_SIZE(pd_snk_pdo);
 
 void pd_set_input_current_limit(int port, uint32_t max_ma,
-	uint32_t supply_voltage)
+								uint32_t supply_voltage)
 {
+	usb_pd_ob1[port].max_ma = max_ma;
+	usb_pd_ob1[port].supply_voltage = supply_voltage;
 
+	if (max_ma == 0 || supply_voltage == 0)
+		usb_pd_ob1[port].mode = 0;
+	else
+	{
+		usb_pd_ob1[port].mode = 1;
+	}
 }
 
 int pd_is_valid_input_voltage(int mv)
@@ -60,18 +78,20 @@ int pd_snk_is_vbus_provided(int port)
 timestamp_t get_time(void)
 {
 	timestamp_t t;
-  t.val  = millis()*1000;
-  t.val += micros()%1000;
-  return t;
+	t.val = millis() * 1000;
+	t.val += micros() % 1000;
+	return t;
 }
 
 void pd_power_supply_reset(int port)
 {
-	return;
+	usb_pd_ob1[port].mode = 2;
+	usb_pd_ob1[port].max_ma = 500;
+	usb_pd_ob1[port].supply_voltage = 5000;
 }
 
 int pd_custom_vdm(int port, int cnt, uint32_t *payload,
-		  uint32_t **rpayload)
+				  uint32_t **rpayload)
 {
 #if 0
 	int cmd = PD_VDO_CMD(payload[0]);
@@ -170,47 +190,64 @@ int pd_set_power_supply_ready(int port)
 
 	/* notify host of power info change */
 	pd_send_host_event(PD_EVENT_POWER_CHANGE);
-#endif // if 0
+#endif				   // if 0
 	return EC_SUCCESS; /* we are ready */
 }
 
-void pd_transition_voltage(int idx)
+void pd_transition_voltage(int port, int idx)
 {
-	/* No-operation: we are always 5V */
-	
-#if 0
-	timestamp_t deadline;
-	uint32_t mv = src_pdo_charge[idx - 1].mv;
 
-	/* Is this a transition to a new voltage? */
-	if (charge_port_is_active() && vbus[CHG].mv != mv) {
-		/*
-		 * Alter voltage limit on charge port, this should cause
-		 * the port to select the desired PDO.
-		 */
-		pd_set_external_voltage_limit(CHG, mv);
-
-		/* Wait for CHG transition */
-		deadline.val = get_time().val + PD_T_PS_TRANSITION;
-		CPRINTS("Waiting for CHG port transition");
-		while (charge_port_is_active() &&
-		       vbus[CHG].mv != mv &&
-		       get_time().val < deadline.val)
-			msleep(10);
-
-		if (vbus[CHG].mv != mv) {
-			CPRINTS("Missed CHG transition, resetting DUT");
-			pd_power_supply_reset(DUT);
-			return;
-		}
-
-		CPRINTS("CHG transitioned");
+	if (idx - 1 < 0)
+	{
+		pd_power_supply_reset(port);
+		return;
 	}
 
-	vbus[DUT].mv = vbus[CHG].mv;
-	vbus[DUT].ma = vbus[CHG].ma;
-#endif // if 0
+	uint32_t mv;
+	uint32_t ma;
+	pd_extract_pdo_power(pd_src_pdo[idx - 1], &ma, &mv);
 
+	usb_pd_ob1[port].mode = 2;
+	usb_pd_ob1[port].supply_voltage = mv;
+	usb_pd_ob1[port].max_ma = ma;
+
+	char str[30];
+	memset(str, ' ', 30);
+	sprintf(str, "Requested port: %d idx: %d\n\n", port, idx);
+	usb_serial_write(str, 30);
+
+	// /* No-operation: we are always 5V */
+
+	// timestamp_t deadline;
+	// uint32_t mv = src_pdo_charge[idx - 1].mv;
+
+	// /* Is this a transition to a new voltage? */
+	// if (charge_port_is_active() && vbus[CHG].mv != mv) {
+	// 	/*
+	// 	 * Alter voltage limit on charge port, this should cause
+	// 	 * the port to select the desired PDO.
+	// 	 */
+	// 	pd_set_external_voltage_limit(CHG, mv);
+
+	// 	/* Wait for CHG transition */
+	// 	deadline.val = get_time().val + PD_T_PS_TRANSITION;
+	// 	CPRINTS("Waiting for CHG port transition");
+	// 	while (charge_port_is_active() &&
+	// 	       vbus[CHG].mv != mv &&
+	// 	       get_time().val < deadline.val)
+	// 		msleep(10);
+
+	// 	if (vbus[CHG].mv != mv) {
+	// 		CPRINTS("Missed CHG transition, resetting DUT");
+	// 		pd_power_supply_reset(DUT);
+	// 		return;
+	// 	}
+
+	// 	CPRINTS("CHG transitioned");
+	// }
+
+	// vbus[DUT].mv = vbus[CHG].mv;
+	// vbus[DUT].ma = vbus[CHG].ma;
 }
 
 void pd_check_dr_role(int port, int dr_role, int flags)

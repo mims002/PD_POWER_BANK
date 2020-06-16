@@ -50,9 +50,14 @@ int pd_check_requested_voltage(uint32_t rdo, const int port)
 	if (max_ma > pdo_ma && !(rdo & RDO_CAP_MISMATCH))
 		return EC_ERROR_INVAL; /* too much max current */
 
-	CPRINTF("Requested %d V %d mA (for %d/%d mA)\n",
+	char str [40];
+	memset(str, 0, 40);
+	sprintf(str,"Requested %d V %d mA (for %d/%d mA)\n",
 			((pdo >> 10) & 0x3ff) * 50, (pdo & 0x3ff) * 10,
 			op_ma * 10, max_ma * 10);
+	usb_serial_write(str, sizeof(str));
+
+
 
 	/* Accept the requested voltage */
 	return EC_SUCCESS;
@@ -84,13 +89,13 @@ int pd_find_pdo_index(int port, int max_mv, uint32_t *selected_pdo)
 	int cur_uw = 0;
 	int prefer_cur;
 	const uint32_t *src_caps = pd_src_caps[port];
-	extern int pd_source_cap_current_index;
-#if 0
+
 	/* max voltage is always limited by this boards max request */
 	max_mv = MIN(max_mv, PD_MAX_VOLTAGE_MV);
 
 	/* Get max power that is under our max voltage input */
-	for (i = 0; i < pd_src_cap_cnt[port]; i++) {
+	for (i = 0; i < pd_src_cap_cnt[port]; i++)
+	{
 		/* its an unsupported Augmented PDO (PD3.0) */
 		if ((src_caps[i] & PDO_TYPE_MASK) == PDO_TYPE_AUGMENTED)
 			continue;
@@ -103,15 +108,19 @@ int pd_find_pdo_index(int port, int max_mv, uint32_t *selected_pdo)
 		if (!pd_is_valid_input_voltage(mv))
 			continue;
 
-		if ((src_caps[i] & PDO_TYPE_MASK) == PDO_TYPE_BATTERY) {
+		if ((src_caps[i] & PDO_TYPE_MASK) == PDO_TYPE_BATTERY)
+		{
 			uw = 250000 * (src_caps[i] & 0x3FF);
-		} else {
+		}
+		else
+		{
 			ma = (src_caps[i] & 0x3FF) * 10;
 			ma = MIN(ma, PD_MAX_CURRENT_MA);
 			uw = ma * mv;
 		}
 
-		if (mv > max_mv)
+		//always gets the higher voltage
+		if (mv > max_mv && max_mv <= ((src_caps[ret] >> 10) & 0x3FF) * 50)
 			continue;
 		uw = MIN(uw, PD_MAX_POWER_MW * 1000);
 		prefer_cur = 0;
@@ -125,7 +134,8 @@ int pd_find_pdo_index(int port, int max_mv, uint32_t *selected_pdo)
 			prefer_cur = 1;
 #endif
 		/* Prefer higher power, except for tiebreaker */
-		if (uw > cur_uw || prefer_cur) {
+		if (uw > cur_uw || prefer_cur)
+		{
 			ret = i;
 			cur_uw = uw;
 			cur_mv = mv;
@@ -134,9 +144,6 @@ int pd_find_pdo_index(int port, int max_mv, uint32_t *selected_pdo)
 
 	if (selected_pdo)
 		*selected_pdo = src_caps[ret];
-#endif
-	if (selected_pdo)
-		*selected_pdo = src_caps[pd_source_cap_current_index];
 
 	return ret;
 }
@@ -176,7 +183,6 @@ int pd_build_request(int port, uint32_t *rdo, uint32_t *ma, uint32_t *mv,
 	int uw;
 	int max_or_min_ma;
 	int max_or_min_mw;
-	extern int pd_source_cap_current_index;
 
 	if (req_type == PD_REQUEST_VSAFE5V)
 	{
@@ -187,9 +193,8 @@ int pd_build_request(int port, uint32_t *rdo, uint32_t *ma, uint32_t *mv,
 	else
 	{
 		/* find pdo index for max voltage we can request */
-		//pdo_index = pd_find_pdo_index(port, max_request_mv, &pdo);
-		pdo_index = pd_source_cap_current_index;
-		pdo = pd_src_caps[port][pd_source_cap_current_index];
+		pdo_index = pd_find_pdo_index(port, max_request_mv, &pdo);
+		pdo = pd_src_caps[port][pdo_index];
 	}
 
 	pd_extract_pdo_power(pdo, ma, mv);
@@ -198,7 +203,6 @@ int pd_build_request(int port, uint32_t *rdo, uint32_t *ma, uint32_t *mv,
 	// memset(str, ' ', 50);
 	// sprintf(str, "Source Power %lu : %lu\n\n", mv, ma);
 	// usb_serial_write(str, 50);
-
 
 	uw = *ma * *mv;
 	/* Mismatch bit set if less power offered than the operating power */
