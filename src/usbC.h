@@ -1,0 +1,3 @@
+void setupUsbC();
+
+void runUsbC();
