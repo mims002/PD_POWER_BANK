@@ -21,7 +21,7 @@
 extern struct tc_module tc_instance;
 extern uint32_t g_us_timestamp_upper_32bit;
 
-struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
+extern struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
 
 uint32_t pd_task_set_event(uint32_t event, int wait_for_reply)
 {

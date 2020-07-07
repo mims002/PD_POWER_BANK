@@ -1,6 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include "usb_pd.h"
+
 class battery
 {
 
@@ -8,6 +10,7 @@ public:
     double batteryVoltage[4];
     double lastBatteryVoltage[4];
     unsigned long lastRun = 0;
+    int remainingPower = 50;
 
     int batteryPin[4] = {21, 20, 17, 16};
     double batteryOffset[4] = {
@@ -39,12 +42,25 @@ public:
     void batteryStatus(int bat, int yOffset, char *buff);
     void setBatteryLevel(int bat, int percentage);
     void drawBattery(int bat);
+    void setPowerLevel(int offsetY, char *value, int x = 125, int y=0);
+};
+
+class usbC
+{
+public:
+    int source;
+    unsigned long lastRun = 0;
+    usbC();
+    void runState();
 };
 
 struct objStoreStruct
 {
     battery battery;
     graphics graphics;
+    usbC usbC;
+ 
 };
+
 
 #endif
