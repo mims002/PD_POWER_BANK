@@ -25,6 +25,7 @@ int selected = 0;
 
 usbC::usbC()
 {
+  return;
   pinMode(usb_pd_int_pin, INPUT_PULLUP);
 
   Wire.begin();

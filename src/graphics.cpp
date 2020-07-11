@@ -57,7 +57,6 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, 9);
 
 graphics::graphics()
 {
-
   tft.begin();
   tft.setRotation(2);
 
@@ -89,7 +88,7 @@ graphics::graphics()
 
   this->setPowerLevel(4, "Power", padding, 8);
 
-  tft.setSPISpeed(48000000);
+  tft.setSPISpeed(4000000);
 }
 
 enum BatteryStatus
