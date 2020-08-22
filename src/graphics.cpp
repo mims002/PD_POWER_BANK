@@ -23,8 +23,8 @@
 #include "usb_pd.h"
 
 // For the Adafruit shield, these are the default.
-#define TFT_DC 28
-#define TFT_CS 10
+#define TFT_DC 36
+#define TFT_CS 34
 #define batteryWidth 60
 #define batteryHeight 30
 
@@ -51,7 +51,7 @@ enum powerOffset
 };
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, 9);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, 35);
 // If using the breakout, change pins as desired
 //Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
 

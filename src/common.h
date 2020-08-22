@@ -11,13 +11,14 @@ public:
     double lastBatteryVoltage[4];
     unsigned long lastRun = 0;
     int remainingPower = 50;
+    int enableBatt = 28;
 
-    int batteryPin[4] = {21, 20, 17, 16};
+    int batteryPin[4] = {20, 21, 22, 23};
     double batteryOffset[4] = {
-        calcOffset(1015000.0, 940000.0),
-        calcOffset(1008000.0, 508000.0),
-        calcOffset(998000.0, 300000.0),
-        calcOffset(995000.0, 239000.0),
+        calcOffset(100000., 20000),
+        calcOffset(100000., 27000),
+        calcOffset(100000., 47000),
+        calcOffset(100000., 200000),
     };
 
     battery(/* args */);
@@ -57,9 +58,9 @@ public:
 class charger
 {
 public:
-    const int dpot_bat_cs = 24;
-    const int dpot_usbc_cs = 0;
-    const int dpot_dc_cs = 0;
+    const int dpot_bat_cs = 37;
+    const int dpot_usbc_cs = 38;
+    const int dpot_dc_cs = 38;
 
     const int con_bat = 0;
     const int con_usbc_input = 0;

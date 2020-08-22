@@ -1,6 +1,6 @@
 #include "common.h"
 #include <Arduino.h>
-
+int pinn = 29;
 battery::battery()
 {
 
@@ -8,18 +8,29 @@ battery::battery()
     {
         pinMode(batteryPin[i], INPUT);
     }
+    pinMode(enableBatt, OUTPUT);
+    pinMode(pinn, OUTPUT);
+    digitalWrite(pinn,LOW);
+    delay(500);
+        digitalWrite(pinn,HIGH);
+
 }
 
 double battery::getBatteryVoltage()
 {
-    analogReadAveraging(10);
-    analogReadResolution(12);
+    digitalWrite(enableBatt, HIGH);
+    delay(50);
+    // analogReadAveraging(10);
+    
     for (int i = 0; i < sizeof(batteryPin) / sizeof(int); i++)
     {
         // lastBatteryVoltage[i] = batteryVoltage[i];
         int read = analogRead(batteryPin[i]);
-        batteryVoltage[i] = (read * (3.26 / 4095.0) * batteryOffset[i]) - 0.1;
+        batteryVoltage[i] = (read * (3.3 / 4095.0) * batteryOffset[i]);
     }
+
+
+    digitalWrite(enableBatt, LOW);
 }
 
 void battery::runState()

@@ -56,7 +56,7 @@ void charger::test(int cs)
     for (int level = 240; level < 255; level++)
     {
         digitalPotWrite(cs, channel0, level);
-        delay(500);
+        delay(50);
     }
     // // change the resistance on this channel from min to max:
     // for (int level = 0; level < 255; level++)
@@ -71,7 +71,7 @@ void charger::test(int cs)
     for (int level = 0; level < 255; level++)
     {
         digitalPotWrite(cs, channel0, 255 - level);
-        delay(500);
+        delay(50);
     }
     // // change the resistance on this channel from max to min:
     // for (int level = 0; level < 255; level++)

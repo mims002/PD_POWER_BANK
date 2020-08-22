@@ -36,21 +36,22 @@ void loop()
         objStore.graphics.lastRun = millis();
     }
 
-    // if (millis() - objStore.battery.lastRun > 500)
-    // {
-    //     //run each state
-    //     objStore.battery.runState();
-    //     objStore.battery.lastRun = millis();
-    // }
+    objStore.charger.runState();
+        // if (millis() - objStore.battery.lastRun > 500)
+        // {
+        //     //run each state
+        //     objStore.battery.runState();
+        //     objStore.battery.lastRun = millis();
+        // }
 
-    // if (millis() - objStore.usbC.lastRun > 1)
-    // {
-    //     //run each state
-    //     objStore.usbC.runState();
-    //     objStore.usbC.lastRun = millis();
-    // }
+        // if (millis() - objStore.usbC.lastRun > 1)
+        // {
+        //     //run each state
+        //     objStore.usbC.runState();
+        //     objStore.usbC.lastRun = millis();
+        // }
 
-    if (true)
+        if (true)
     {
         // toggle = !toggle;
         objStore.charger.runState();
