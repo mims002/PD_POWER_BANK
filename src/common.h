@@ -64,8 +64,8 @@ public:
 
     const int con_bat = 0;
     const int con_usbc_input = 0;
-    const int dc_swt = 26;
-    const int usb_swt = 27;
+    const int dc_swt = 27;
+    const int usb_swt = 26;
     
     const int dc_mode = 29;
     const int usb_mode = 30;
@@ -88,7 +88,7 @@ public:
 
     charger();
     void test(int cs);
-    void setUsbV(double v);
+    void setV(int readVpin, int readCpin, int fPin, double v, double cur);
     void setR(int pin,int r);
     double readV(int pin, double ratio, double offset);
     void digitalPotWrite(int cs, int address, int value);

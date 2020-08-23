@@ -1,6 +1,7 @@
 #include "common.h"
 #include <Arduino.h>
 #include <SPI.h>
+#include <map>
 
 extern objStoreStruct objStore;
 
@@ -45,32 +46,11 @@ charger::charger()
     SPI.begin();
 }
 
-void charger::setUsbV(double v)
+void charger::setV(int readVpin, int readCpin, int fPin, double v, double cur)
 {
-    double v_read = readV(usbCVoltReadPin, vOffsetUsb,1);
-    if(v_read<4) return; //do not run if battery is not connected 
+   //turn off the power
+   digitalWrite(fPin, off);
 
-    while (v_read < v)
-    {
-        if (usbR >= 400)
-            break;
-        Serial.println(v_read);
-
-        v_read = readV(usbCVoltReadPin, vOffsetUsb,1);
-
-        this->setR(dpot_usbc_cs, ++usbR);
-    }
-
-    while (v_read > v)
-    {
-        if (usbR < 0)
-            break;
-        Serial.println(v_read);
-
-        v_read = readV(dcVoltReadPin, vOffsetUsb,1);
-
-        this->setR(dpot_usbc_cs, --usbR);
-    }
 }
 
 double charger::readV(int pin, double ratio, double offset)
@@ -81,10 +61,14 @@ double charger::readV(int pin, double ratio, double offset)
 
 void charger::runState()
 {
-    Serial.print("Voltage: ");
-    Serial.print(this->readV(usbCVoltReadPin,vOffsetUsb,1.6));
-    Serial.print(" Current: ");
-    Serial.println(this->readCurrent(bat_cur));
+    // Serial.print("Voltage: ");
+    // Serial.print(this->readV(usbCVoltReadPin,vOffsetUsb,1.6));
+    // Serial.print(" Current: ");
+    // Serial.println(this->readCurrent(bat_cur));
+
+    // setV(usbCVoltReadPin, 0, dc_swt, 0,0);
+    setR(dpot_usbc_cs, 490);
+    
     delay(500);
 }
 
