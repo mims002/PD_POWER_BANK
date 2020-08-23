@@ -58,22 +58,41 @@ public:
 class charger
 {
 public:
-    const int dpot_bat_cs = 37;
-    const int dpot_usbc_cs = 38;
+
+    const int dpot_usbc_cs = 37;
     const int dpot_dc_cs = 38;
 
     const int con_bat = 0;
     const int con_usbc_input = 0;
-    const int con_dc_input = 33;
-    const int con_dc_input_converter=0;
-    const int con_usbc_input_converter=0;
+    const int dc_swt = 26;
+    const int usb_swt = 27;
+    
+    const int dc_mode = 29;
+    const int usb_mode = 30;
+    const int bat_cur = 16;
+
 
 
     void runState();
-    
+
+    int dcVoltReadPin = 39; 
+    int usbCVoltReadPin = 40;
+
+    double vOffsetDC= calcOffset(100400., 14940.);
+    double vOffsetUsb= calcOffset(100000., 15000.);
+
+    double calcOffset(double R1, double R2)
+    {
+        return ((R1 + R2) / R2);
+    }
+
     charger();
     void test(int cs);
+    void setUsbV(double v);
+    void setR(int pin,int r);
+    double readV(int pin, double ratio, double offset);
     void digitalPotWrite(int cs, int address, int value);
+    double charger::readCurrent(int pin);
 };
 
 struct objStoreStruct

@@ -4,11 +4,19 @@
 
 extern objStoreStruct objStore;
 
+int modeCharge = HIGH;
+int modeDischarge = LOW;
+int on = LOW;
+int off = HIGH;
+
+double dcVoltage;
+double usbVoltage;
+
+int dcR = 0;
+int usbR = 0;
+
 charger::charger()
 {
-    // set the slaveSelectPin as an output:
-    pinMode(dpot_bat_cs, OUTPUT);
-    digitalWrite(dpot_bat_cs, HIGH);
 
     pinMode(dpot_usbc_cs, OUTPUT);
     digitalWrite(dpot_usbc_cs, HIGH);
@@ -16,69 +24,87 @@ charger::charger()
     pinMode(dpot_dc_cs, OUTPUT);
     digitalWrite(dpot_dc_cs, HIGH);
 
-    pinMode(con_dc_input, OUTPUT);
-    digitalWrite(con_dc_input, LOW);
+    pinMode(dpot_dc_cs, OUTPUT);
+    digitalWrite(dpot_dc_cs, HIGH);
+
+    pinMode(dc_swt, OUTPUT);
+    digitalWrite(dc_swt, on);
+
+    pinMode(usb_swt, OUTPUT);
+    digitalWrite(usb_swt, on);
+
+    pinMode(dc_mode, OUTPUT);
+    digitalWrite(dc_mode, modeDischarge);
+
+    pinMode(usb_mode, OUTPUT);
+    digitalWrite(usb_mode, modeDischarge);
+
+    pinMode(bat_cur, INPUT);
 
     // initialize SPI:
+    SPI.begin();
+}
+
+void charger::setUsbV(double v)
+{
+    double v_read = readV(usbCVoltReadPin, vOffsetUsb,1);
+    if(v_read<4) return; //do not run if battery is not connected 
+
+    while (v_read < v)
+    {
+        if (usbR >= 400)
+            break;
+        Serial.println(v_read);
+
+        v_read = readV(usbCVoltReadPin, vOffsetUsb,1);
+
+        this->setR(dpot_usbc_cs, ++usbR);
+    }
+
+    while (v_read > v)
+    {
+        if (usbR < 0)
+            break;
+        Serial.println(v_read);
+
+        v_read = readV(dcVoltReadPin, vOffsetUsb,1);
+
+        this->setR(dpot_usbc_cs, --usbR);
+    }
+}
+
+double charger::readV(int pin, double ratio, double offset)
+{
+    int read = analogRead(pin);
+    return (read * (3.27 / 4096.0) * ratio + offset);
 }
 
 void charger::runState()
 {
-    //check if dc is in input mode 
-    //check current draw
-
-    //check if usbc is in input mode 
-
-
-    //check if dc is in output mode 
-    //check current draw
-
-    //check if battery should be charging
-
-    //check if battery should be in power mode
-
-
-
-    SPI.begin();
-    digitalWrite(con_dc_input, HIGH);
-    digitalPotWrite(dpot_bat_cs, 1, 254);
-
-    test(dpot_bat_cs);
+    Serial.print("Voltage: ");
+    Serial.print(this->readV(usbCVoltReadPin,vOffsetUsb,1.6));
+    Serial.print(" Current: ");
+    Serial.println(this->readCurrent(bat_cur));
+    delay(500);
 }
 
-void charger::test(int cs)
+double charger::readCurrent(int pin)
+{    
+    int read = analogRead(pin);
+    double v =  this->readV(pin,1.5,-.01);
+    v = v - 2.5 +0;
+    v = v/.1;
+    return v;
+}
+
+void charger::setR(int pin, int r)
 {
     // go through the six channels of the digital pot:
     int channel0 = 0x0;
     int channel1 = 0x1;
 
-    // change the resistance on this channel from min to max:
-    for (int level = 240; level < 255; level++)
-    {
-        digitalPotWrite(cs, channel0, level);
-        delay(50);
-    }
-    // // change the resistance on this channel from min to max:
-    // for (int level = 0; level < 255; level++)
-    // {
-    //     digitalPotWrite(cs, channel1, level);
-    //     delay(500);
-    // }
-
-    // wait a second at the top:
-    delay(100);
-    // change the resistance on this channel from max to min:
-    for (int level = 0; level < 255; level++)
-    {
-        digitalPotWrite(cs, channel0, 255 - level);
-        delay(50);
-    }
-    // // change the resistance on this channel from max to min:
-    // for (int level = 0; level < 255; level++)
-    // {
-    //     this->digitalPotWrite(cs, channel1, 255 - level);
-    //     delay(500);
-    // }
+    this->digitalPotWrite(pin, channel0, r >= 255 ? 255 : r);
+    this->digitalPotWrite(pin, channel1, r >= 255 ? r - 255 : 0);
 }
 
 void charger::digitalPotWrite(int cs, int address, int value)
@@ -90,7 +116,7 @@ void charger::digitalPotWrite(int cs, int address, int value)
     digitalWrite(cs, LOW);
 
     unsigned int fomatted = address << 4;
-    Serial.print(fomatted, BIN);
+    // Serial.print(fomatted, BIN);
     Serial.print("   Value: ");
     Serial.println(value);
     //  send in the address and value via SPI:
@@ -105,8 +131,4 @@ void charger::digitalPotWrite(int cs, int address, int value)
     digitalWrite(cs, HIGH);
     // release control of the SPI port
     SPI.endTransaction();
-
-    objStore.battery.runState();
-    //run each state
-    objStore.graphics.runState();
 }

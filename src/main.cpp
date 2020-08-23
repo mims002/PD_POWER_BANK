@@ -23,37 +23,36 @@ void setup()
     objStore.battery = battery();
 
     pinMode(usbcPowerPin, OUTPUT);
+    analogReadResolution(12);
+    analogReadAveraging(8);
 }
 unsigned long time = 0;
 boolean toggle = 0;
 void loop()
 {
 
-    if (millis() - objStore.graphics.lastRun > 700)
-    {
-        //run each state
-        objStore.graphics.runState();
-        objStore.graphics.lastRun = millis();
-    }
+    // if (millis() - objStore.graphics.lastRun > 700)
+    // {
+    //     //run each state
+    //     objStore.graphics.runState();
+    //     objStore.graphics.lastRun = millis();
+    // }
 
     objStore.charger.runState();
-        // if (millis() - objStore.battery.lastRun > 500)
-        // {
-        //     //run each state
-        //     objStore.battery.runState();
-        //     objStore.battery.lastRun = millis();
-        // }
+    // if (millis() - objStore.battery.lastRun > 500)
+    // {
+    //     //run each state
+    //     objStore.battery.runState();
+    //     objStore.battery.lastRun = millis();
+    // }
 
-        // if (millis() - objStore.usbC.lastRun > 1)
-        // {
-        //     //run each state
-        //     objStore.usbC.runState();
-        //     objStore.usbC.lastRun = millis();
-        // }
+    // if (millis() - objStore.usbC.lastRun > 1)
+    // {
+    //     //run each state
+    //     objStore.usbC.runState();
+    //     objStore.usbC.lastRun = millis();
+    // }
 
-        if (true)
-    {
-        // toggle = !toggle;
-        objStore.charger.runState();
-    }
+    // toggle = !toggle;
+    // objStore.charger.runState();
 }

@@ -63,9 +63,6 @@ graphics::graphics()
   tft.fillScreen(ILI9341_BLACK);
   yield();
 
-  pinMode(27, OUTPUT);
-  digitalWrite(27, HIGH);
-
   tft.fillScreen(ILI9341_BLACK);
 
   batteryColor = ILI9341_WHITE;
