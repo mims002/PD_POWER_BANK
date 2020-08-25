@@ -23,6 +23,7 @@ public:
 
     battery(/* args */);
     void runState();
+    int chargeLevel(); //0 stop charger, 1 increase, -1 decrease
 
     double getBatteryVoltage();
 
@@ -69,9 +70,9 @@ public:
     
     const int dc_mode = 29;
     const int usb_mode = 30;
-    const int bat_cur = 16;
-
-
+    const int bat_cur_pin = 16;
+    const int usb_cur_pin = 16;
+    const int dc_cur_pin = 16;
 
     void runState();
 
@@ -93,6 +94,9 @@ public:
     double readV(int pin, double ratio, double offset);
     void digitalPotWrite(int cs, int address, int value);
     double charger::readCurrent(int pin);
+    void charger::checkUsb();
+    void charger::checkDc();
+    void charger::sinkBatt();
 };
 
 struct objStoreStruct

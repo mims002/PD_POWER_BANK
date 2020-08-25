@@ -1,6 +1,12 @@
 #include "common.h"
 #include <Arduino.h>
 
+
+enum batteryState{
+    source,
+    sink,
+    off
+};
 battery::battery()
 {
 
@@ -14,8 +20,6 @@ battery::battery()
 double battery::getBatteryVoltage()
 {
     digitalWrite(enableBatt, HIGH);
-    delay(50);
-    // analogReadAveraging(10);
 
     for (int i = 0; i < sizeof(batteryPin) / sizeof(int); i++)
     {
@@ -30,4 +34,8 @@ double battery::getBatteryVoltage()
 void battery::runState()
 {
     this->getBatteryVoltage();
+}
+
+int battery::chargeLevel(){
+    
 }
