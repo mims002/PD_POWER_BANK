@@ -58,10 +58,10 @@ charger::charger()
     pinMode(usb_mode, OUTPUT);
     digitalWrite(usb_mode, modeDischarge);
 
-    pinMode(bat_cur, INPUT);
+    // pinMode(bat_cur, INPUT);
 
     // initialize SPI:
-    SPI.begin();
+    // SPI.begin();
 }
 
 void charger::setV(int readVpin, int readCpin, int fPin, double v, double cur)
@@ -78,10 +78,10 @@ double charger::readV(int pin, double ratio, double offset)
 
 void charger::runState()
 {
-    if (charging)
-    {
-        //check voltage and current
-    }
+    // if (charging)
+    // {
+    //     //check voltage and current
+    // }
 }
 
 void charger::checkDc()
@@ -102,7 +102,7 @@ void charger::checkDc()
         if (v >= dc.v)
             digitalWrite(dc_swt, off);
 
-        if (v < dc.v - 1)
+        if (v < dc.v - 1);
         //increase power
     }
 }

@@ -25,12 +25,14 @@
 // For the Adafruit shield, these are the default.
 #define TFT_DC 36
 #define TFT_CS 34
+#define TFT_PWR 33
+#define TFT_RST 35
 #define batteryWidth 60
 #define batteryHeight 30
 
 int batteryY = 5;
 int batteryPercentY = 20;
-
+boolean insideMenu = false;
 extern objStoreStruct objStore;
 extern struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
 uint16_t batteryColor = ILI9341_WHITE;
@@ -51,14 +53,14 @@ enum powerOffset
 };
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, 35);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 // If using the breakout, change pins as desired
-//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+// Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
 
 graphics::graphics()
 {
   tft.begin();
-  tft.setRotation(2);
+  tft.setRotation(1);
 
   tft.fillScreen(ILI9341_BLACK);
   yield();
@@ -85,7 +87,8 @@ graphics::graphics()
 
   this->setPowerLevel(4, "Power", padding, 8);
 
-  tft.setSPISpeed(4000000);
+  tft.setSPISpeed(50 * 1000000);
+  digitalWrite(TFT_PWR, HIGH);
 }
 
 enum BatteryStatus
@@ -109,77 +112,83 @@ void graphics::setPowerLevel(int offsetY, char *value, int x, int y)
 }
 void graphics::runState()
 {
-
-  //update battery
-  for (int i = 0; i < sizeof(objStore.battery.batteryPin) / sizeof(int); i++)
+  if (insideMenu)
   {
-    if (i == 0)
-      batteryColor = ILI9341_RED;
-    else if (i == 1)
-      batteryColor = ILI9341_BLUE;
-    else
-      batteryColor = ILI9341_WHITE;
-    char str[8];
-    memset(str, 0, 8);
-    memset(str, ' ', 7);
-    sprintf(str, "%.4fv", objStore.battery.batteryVoltage[i]);
-
-    batteryStatus(i, voltage, str);
-
-    setBatteryLevel(i, objStore.battery.batteryVoltage[i] / (4.2 * (i + 1)) * 100);
   }
+  //enter menue
+  else if (this->enterStatus)
+  {
+    this->renderMenu();
+  }
+  //update battery
 
-  this->setPowerLevel(power, "100/100w");
-  this->setPowerLevel(flow, "-50w");
-  this->setPowerLevel(time, "20h");
+  // if (i == 0)
+  //   batteryColor = ILI9341_RED;
+  // else if (i == 1)
+  //   batteryColor = ILI9341_BLUE;
+  // else
+  //   batteryColor = ILI9341_WHITE;
+  char str[5];
+  memset(str, 0, 5);
+  memset(str, ' ', 4);
+  double battLevel = objStore.battery.batteryVoltage[3] / 16.8 * 100;
+  int offset = battLevel > 99 ? 0 : battLevel > 9 ? 1 : 2;
+  sprintf(str + offset, "%1.0f%%", battLevel);
 
-  tft.setCursor(padding + 120, divider2 + padding);
-  tft.setTextSize(2);
-  if (usb_pd_ob1[0].mode == 2)
-    this->setPowerLevel(3, "SOURCE ", 125, 8);
-  else if (usb_pd_ob1[0].mode == 1)
-    this->setPowerLevel(3, "SINK   ", 125, 8);
-  else if (usb_pd_ob1[0].mode == 0)
-    this->setPowerLevel(3, "Removed", 125, 8);
+  batteryStatus(str);
 
-  char str[13];
-  memset(str, 0, 13);
-  memset(str, ' ', 12);
-  sprintf(str, "%.0fv/%.1fa", usb_pd_ob1[0].supply_voltage / 1000., usb_pd_ob1[0].max_ma / 1000.);
+  // setBatteryLevel(i, objStore.battery.batteryVoltage[i] / (4.2 * (i + 1)) * 100);
 
-  this->setPowerLevel(4, str, 125, 8);
+  // this->setPowerLevel(power, "100/100w");
+  // this->setPowerLevel(flow, "-50w");
+  // this->setPowerLevel(time, "20h");
 
-  tft.setTextSize(1);
+  // tft.setCursor(padding + 120, divider2 + padding);
+  // tft.setTextSize(2);
+  // if (usb_pd_ob1[0].mode == 2)
+  //   this->setPowerLevel(3, "SOURCE ", 125, 8);
+  // else if (usb_pd_ob1[0].mode == 1)
+  //   this->setPowerLevel(3, "SINK   ", 125, 8);
+  // else if (usb_pd_ob1[0].mode == 0)
+  //   this->setPowerLevel(3, "Removed", 125, 8);
+
+  // char str[13];
+  // memset(str, 0, 13);
+  // memset(str, ' ', 12);
+  // sprintf(str, "%.0fv/%.1fa", usb_pd_ob1[0].supply_voltage / 1000., usb_pd_ob1[0].max_ma / 1000.);
+
+  // this->setPowerLevel(4, str, 125, 8);
+
+  // tft.setTextSize(1);
 }
 
-void graphics::batteryStatus(int bat, int yOffset, char *buff)
+void graphics::renderMenu()
 {
-  tft.setCursor(batteryWidth * bat + 4, (yOffset + 1) * padding + batteryHeight);
+  String menuOptions[] = {
+      "Set DC Output",
+      "Set DC Input"};
+         
+    for(int i=0; i< sizeof(menuOptions)/sizeof(menuOptions[0]); i++){
+      tft.setCursor(5,20*i);
+      tft.setTextColor(ILI9341_BLACK, ILI9341_RED);
+      tft.println(menuOptions[i]);
+      
+    }
+
+  this->enterStatus=0;
+}
+void graphics::batteryStatus(char *buff)
+{
+  tft.setCursor(battx + 7, batty + batth + battTh);
+  tft.setTextSize(2);
   tft.setTextColor(batteryColor, ILI9341_BLACK);
   tft.print(buff);
 }
 
 void graphics::drawBattery(int bat)
 {
-
-  int w = batteryWidth - 5, h = batteryHeight;
-  int x = batteryWidth * bat;
-  int y = 5;
-
-  tft.fillRoundRect(x + w, y + h / 2 - 5, 3, 10, 1, batteryColor);
-
-  for (int i = 0; i < 5; i++)
-  {
-    x += 1;
-    y += 1;
-    w -= 2;
-    h -= 2;
-
-    if (i <= 1)
-      tft.drawRoundRect(x, y, w, h, 8, batteryColor);
-    else
-      tft.drawRoundRect(x, y, w, h, 1, batteryColor);
-  }
+  tft.drawRoundRect(battx, batty, battw, batth, 5, ILI9341_WHITE);
+  tft.drawRoundRect(battTx, 0, battTw, battTh, 3, ILI9341_WHITE);
 }
 
 void graphics::setBatteryLevel(int bat, int percentage)

@@ -40,10 +40,25 @@ public:
     graphics(/* args */);
     void runState();
     unsigned long lastRun = 0;
+    //240x320
+    int bottomText = 30;
+    int battTh = 10;
+    int battTw = 40;
+    int padding = 10;
+    int battw = 60;
+    int batth = 240 - bottomText - battTh;
+    int battx = 320 - padding - battw;
 
-    void batteryStatus(int bat, int yOffset, char *buff);
+    int batty = 0 + battTh;
+    int battTx = battx + battw / 2 - battTw / 2;
+
+    int enterStatus=0;
+    int knobStatus=0;
+
+    void batteryStatus(char *buff);
     void setBatteryLevel(int bat, int percentage);
     void drawBattery(int bat);
+    void renderMenu();
     void setPowerLevel(int offsetY, char *value, int x = 125, int y = 0);
 };
 
@@ -59,7 +74,6 @@ public:
 class charger
 {
 public:
-
     const int dpot_usbc_cs = 37;
     const int dpot_dc_cs = 38;
 
@@ -67,7 +81,7 @@ public:
     const int con_usbc_input = 0;
     const int dc_swt = 27;
     const int usb_swt = 26;
-    
+
     const int dc_mode = 29;
     const int usb_mode = 30;
     const int bat_cur_pin = 16;
@@ -76,11 +90,11 @@ public:
 
     void runState();
 
-    int dcVoltReadPin = 39; 
+    int dcVoltReadPin = 39;
     int usbCVoltReadPin = 40;
 
-    double vOffsetDC= calcOffset(100400., 14940.);
-    double vOffsetUsb= calcOffset(100000., 15000.);
+    double vOffsetDC = calcOffset(100400., 14940.);
+    double vOffsetUsb = calcOffset(100000., 15000.);
 
     double calcOffset(double R1, double R2)
     {
@@ -90,7 +104,7 @@ public:
     charger();
     void test(int cs);
     void setV(int readVpin, int readCpin, int fPin, double v, double cur);
-    void setR(int pin,int r);
+    void setR(int pin, int r);
     double readV(int pin, double ratio, double offset);
     void digitalPotWrite(int cs, int address, int value);
     double charger::readCurrent(int pin);
