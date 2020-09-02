@@ -36,6 +36,7 @@ boolean insideMenu = false;
 extern objStoreStruct objStore;
 extern struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
 uint16_t batteryColor = ILI9341_WHITE;
+int pos = 0;
 
 enum spaces
 {
@@ -115,9 +116,12 @@ void graphics::runState()
   if (insideMenu)
   {
   }
-  //enter menue
-  else if (this->enterStatus)
+  //enter menu
+  else if (this->enterStatus || this->knobStatus != 0)
   {
+    pos += knobStatus / 4;
+    Serial.printf("POS: %d\n", pos);
+    this->knobStatus = 0;
     this->renderMenu();
   }
   //update battery
@@ -166,16 +170,34 @@ void graphics::renderMenu()
 {
   String menuOptions[] = {
       "Set DC Output",
-      "Set DC Input"};
-         
-    for(int i=0; i< sizeof(menuOptions)/sizeof(menuOptions[0]); i++){
-      tft.setCursor(5,20*i);
-      tft.setTextColor(ILI9341_BLACK, ILI9341_RED);
-      tft.println(menuOptions[i]);
-      
-    }
+      "Set DC Input",
+      "Another one"};
+  int len = sizeof(menuOptions) / sizeof(menuOptions[0]);
 
-  this->enterStatus=0;
+  if(pos<0)
+    pos = len-1;
+  else if(pos>=len)
+    pos = 0;
+
+
+  tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
+
+  for (int i = 0; i < len; i++)
+  {
+    tft.setCursor(15, 30 * i + this->battTh + 7);
+    if (pos == i)
+    {
+      tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+      tft.fillRect(10, 30 * i + this->battTh, this->battx - 35, 31, ILI9341_WHITE);
+    }
+    else
+      tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+
+    tft.println(menuOptions[i]);
+    tft.drawLine(10, 30 * i + this->battTh, this->battx - 25, 30 * i + this->battTh, ILI9341_WHITE);
+  }
+
+  this->enterStatus = 0;
 }
 void graphics::batteryStatus(char *buff)
 {
