@@ -17,7 +17,8 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 #include <Arduino.h>
-#include "Fonts/FreeSansOblique9pt7b.h"
+#include "Fonts/FreeSansBold12pt7b.h"
+#include "Fonts/FreeSans12pt7b.h"
 #include "common.h"
 #include <WString.h>
 #include "usb_pd.h"
@@ -37,6 +38,7 @@ extern objStoreStruct objStore;
 extern struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
 uint16_t batteryColor = ILI9341_WHITE;
 int pos = 0;
+int menuId = 0;
 
 enum spaces
 {
@@ -82,13 +84,11 @@ graphics::graphics()
 
   tft.drawLine(0, divider2, 240, divider2, ILI9341_WHITE);
   tft.setCursor(padding, divider2 + padding);
-  tft.setTextSize(2);
   tft.print("USB C-PD");
-  tft.setTextSize(1);
 
   this->setPowerLevel(4, "Power", padding, 8);
 
-  tft.setSPISpeed(50 * 1000000);
+  tft.setSPISpeed(90 * 1000000);
   digitalWrite(TFT_PWR, HIGH);
 }
 
@@ -104,20 +104,14 @@ void graphics::setPowerLevel(int offsetY, char *value, int x, int y)
   // memset(str, 'A', 7);
 
   // sprintf(str, "%d/%dw", objStore.battery.remainingPower, 600);
-  tft.setTextSize(2);
-
   tft.setCursor(x, offsetY * 23 + y + divider1 + padding);
   tft.print(value);
 
-  tft.setTextSize(1);
 }
 void graphics::runState()
 {
-  if (insideMenu)
-  {
-  }
   //enter menu
-  else if (this->enterStatus || this->knobStatus != 0)
+  if (this->enterStatus || this->knobStatus != 0)
   {
     pos += knobStatus / 4;
     Serial.printf("POS: %d\n", pos);
@@ -168,42 +162,84 @@ void graphics::runState()
 
 void graphics::renderMenu()
 {
-  String menuOptions[] = {
-      "Set DC Output",
-      "Set DC Input",
-      "Another one"};
-  int len = sizeof(menuOptions) / sizeof(menuOptions[0]);
 
-  if(pos<0)
-    pos = len-1;
-  else if(pos>=len)
-    pos = 0;
-
-
-  tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
-
-  for (int i = 0; i < len; i++)
+  if (insideMenu && this->enterStatus)
   {
-    tft.setCursor(15, 30 * i + this->battTh + 7);
-    if (pos == i)
-    {
-      tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
-      tft.fillRect(10, 30 * i + this->battTh, this->battx - 35, 31, ILI9341_WHITE);
-    }
-    else
-      tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+    if (menuId == 0)
+      tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
+    //go into new menu
+    if (pos == 0)
+    { //dc output
 
-    tft.println(menuOptions[i]);
-    tft.drawLine(10, 30 * i + this->battTh, this->battx - 25, 30 * i + this->battTh, ILI9341_WHITE);
+      tft.setFont(&FreeSansBold12pt7b);
+      tft.setCursor(10, 25);
+
+      tft.println("Voltage");
+
+      tft.setFont(&FreeSans12pt7b);
+      tft.setCursor(10, 55);
+      tft.println("12v");
+
+      tft.setFont(&FreeSansBold12pt7b);
+      tft.setCursor(10, 100);
+      tft.println("Current");
+
+      tft.setFont(&FreeSans12pt7b);
+      tft.setCursor(10, 130);
+      tft.println("12a");
+
+      tft.setFont(&FreeSansBold12pt7b);
+      tft.setCursor(10, 200);
+      tft.println("Start");
+
+      tft.setCursor(100, 200);
+      tft.println("Cancel");
+    }
+  }
+  else
+  {
+    String menuOptions[] = {
+        "Set DC Output",
+        "Set DC Input",
+        "Set Battery  ",
+    };
+    int len = sizeof(menuOptions) / sizeof(menuOptions[0]);
+
+    if (pos < 0)
+      pos = len - 1;
+    else if (pos >= len)
+      pos = 0;
+
+    tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
+    tft.setFont(&FreeSans12pt7b);
+    tft.setTextSize(1);
+
+    for (int i = 0; i < len; i++)
+    {
+
+      tft.setCursor(15, 35 * i + this->battTh + 24);
+      if (pos == i)
+      {
+        tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+        tft.fillRect(10, 35 * i + this->battTh, this->battx - 35, 36, ILI9341_WHITE);
+      }
+      else
+        tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+
+      tft.println(menuOptions[i]);
+      tft.drawLine(10, 35 * i + this->battTh, this->battx - 25, 35 * i + this->battTh, ILI9341_WHITE);
+    }
   }
 
   this->enterStatus = 0;
+  insideMenu = true;
 }
 void graphics::batteryStatus(char *buff)
 {
-  tft.setCursor(battx + 7, batty + batth + battTh);
-  tft.setTextSize(2);
+  tft.setFont(&FreeSans12pt7b);
+  tft.setCursor(battx + 7, batty + batth + battTh +10);
   tft.setTextColor(batteryColor, ILI9341_BLACK);
+  tft.fillRect(battx, batty + batth, 60,45, ILI9341_BLACK);
   tft.print(buff);
 }
 
