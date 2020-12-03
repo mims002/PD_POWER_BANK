@@ -106,7 +106,6 @@ void graphics::setPowerLevel(int offsetY, char *value, int x, int y)
   // sprintf(str, "%d/%dw", objStore.battery.remainingPower, 600);
   tft.setCursor(x, offsetY * 23 + y + divider1 + padding);
   tft.print(value);
-
 }
 void graphics::runState()
 {
@@ -168,8 +167,13 @@ void graphics::renderMenu()
     if (menuId == 0)
       tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
     //go into new menu
-    if (pos == 0)
+    switch (pos)
     { //dc output
+
+    case 0:
+    case 1:
+      int16_t x, y;
+      uint16_t w, h;
 
       tft.setFont(&FreeSansBold12pt7b);
       tft.setCursor(10, 25);
@@ -178,6 +182,10 @@ void graphics::renderMenu()
 
       tft.setFont(&FreeSans12pt7b);
       tft.setCursor(10, 55);
+
+      tft.getTextBounds("12v", 10, 55, &x, &y, &w, &h);
+      tft.fillRect(x-5,y-5,w+10,h+10,ILI9341_DARKGREY);
+
       tft.println("12v");
 
       tft.setFont(&FreeSansBold12pt7b);
@@ -194,6 +202,8 @@ void graphics::renderMenu()
 
       tft.setCursor(100, 200);
       tft.println("Cancel");
+
+      break;
     }
   }
   else
@@ -201,7 +211,10 @@ void graphics::renderMenu()
     String menuOptions[] = {
         "Set DC Output",
         "Set DC Input",
-        "Set Battery  ",
+        "Set Max Battery",
+        "Set Battery",
+        "Set Battery",
+        "Go Back",
     };
     int len = sizeof(menuOptions) / sizeof(menuOptions[0]);
 
@@ -211,10 +224,10 @@ void graphics::renderMenu()
       pos = 0;
 
     tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
-    tft.setFont(&FreeSans12pt7b);
+    tft.setFont(&FreeSansBold12pt7b);
     tft.setTextSize(1);
-
-    for (int i = 0; i < len; i++)
+    int i;
+    for (i = 0; i < len; i++)
     {
 
       tft.setCursor(15, 35 * i + this->battTh + 24);
@@ -229,6 +242,8 @@ void graphics::renderMenu()
       tft.println(menuOptions[i]);
       tft.drawLine(10, 35 * i + this->battTh, this->battx - 25, 35 * i + this->battTh, ILI9341_WHITE);
     }
+
+    tft.drawLine(10, 35 * i + this->battTh, this->battx - 25, 35 * i + this->battTh, ILI9341_WHITE);
   }
 
   this->enterStatus = 0;
@@ -237,9 +252,9 @@ void graphics::renderMenu()
 void graphics::batteryStatus(char *buff)
 {
   tft.setFont(&FreeSans12pt7b);
-  tft.setCursor(battx + 7, batty + batth + battTh +10);
+  tft.setCursor(battx + 7, batty + batth + battTh + 10);
   tft.setTextColor(batteryColor, ILI9341_BLACK);
-  tft.fillRect(battx, batty + batth, 60,45, ILI9341_BLACK);
+  tft.fillRect(battx, batty + batth, 60, 45, ILI9341_BLACK);
   tft.print(buff);
 }
 
