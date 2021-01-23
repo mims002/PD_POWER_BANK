@@ -22,7 +22,7 @@ long knobPosition = 0;
 
 int enterStatus = 0;
 
-void updateLeft();
+void enterPressed();
 
 void setup()
 {
@@ -40,14 +40,14 @@ void setup()
     pinMode(leftPin, INPUT_PULLUP);
     pinMode(rightPin, INPUT_PULLUP);
     pinMode(enterPin, INPUT_PULLUP);
-
-    attachInterrupt(digitalPinToInterrupt(enterPin), updateLeft, RISING);
+    
+    //enter button
+    attachInterrupt(digitalPinToInterrupt(enterPin), enterPressed, RISING);
 }
 
-void updateLeft()
+void enterPressed()
 {
     objStore.graphics.enterStatus = 1;
-    Serial.println(digitalRead(enterPin));
 }
 
 unsigned long time = 0;
@@ -60,7 +60,6 @@ void loop()
     if (abs(newPos) >= 4)
     {
         objStore.graphics.knobStatus = newPos;
-        Serial.println(knobPosition);
         knob.write(0);
         
         objStore.graphics.runState();

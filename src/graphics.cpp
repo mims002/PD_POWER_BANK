@@ -39,6 +39,7 @@ extern struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
 uint16_t batteryColor = ILI9341_WHITE;
 int pos = 0;
 int menuId = 0;
+int subMenuPos=0;
 
 enum spaces
 {
@@ -113,7 +114,7 @@ void graphics::runState()
   if (this->enterStatus || this->knobStatus != 0)
   {
     pos += knobStatus / 4;
-    Serial.printf("POS: %d\n", pos);
+    Serial.printf("POS: %d, Enter Status: %d\n\n", pos, this->enterStatus);
     this->knobStatus = 0;
     this->renderMenu();
   }
@@ -162,57 +163,14 @@ void graphics::runState()
 void graphics::renderMenu()
 {
 
-  if (insideMenu && this->enterStatus)
+  //display main menu
+  if (menuId == 0)
   {
-    if (menuId == 0)
-      tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
-    //go into new menu
-    switch (pos)
-    { //dc output
-
-    case 0:
-    case 1:
-      int16_t x, y;
-      uint16_t w, h;
-
-      tft.setFont(&FreeSansBold12pt7b);
-      tft.setCursor(10, 25);
-
-      tft.println("Voltage");
-
-      tft.setFont(&FreeSans12pt7b);
-      tft.setCursor(10, 55);
-
-      tft.getTextBounds("12v", 10, 55, &x, &y, &w, &h);
-      tft.fillRect(x-5,y-5,w+10,h+10,ILI9341_DARKGREY);
-
-      tft.println("12v");
-
-      tft.setFont(&FreeSansBold12pt7b);
-      tft.setCursor(10, 100);
-      tft.println("Current");
-
-      tft.setFont(&FreeSans12pt7b);
-      tft.setCursor(10, 130);
-      tft.println("12a");
-
-      tft.setFont(&FreeSansBold12pt7b);
-      tft.setCursor(10, 200);
-      tft.println("Start");
-
-      tft.setCursor(100, 200);
-      tft.println("Cancel");
-
-      break;
-    }
-  }
-  else
-  {
+    //main menu
     String menuOptions[] = {
         "Set DC Output",
         "Set DC Input",
         "Set Max Battery",
-        "Set Battery",
         "Set Battery",
         "Go Back",
     };
@@ -246,9 +204,73 @@ void graphics::renderMenu()
     tft.drawLine(10, 35 * i + this->battTh, this->battx - 25, 35 * i + this->battTh, ILI9341_WHITE);
   }
 
+  //display sub-menu
+  if (this->enterStatus)
+  {
+    if (menuId == 0) //clear out main menu
+
+      //go into new menu
+      switch (pos)
+      {
+
+      case 0:
+
+      case 1: //battery out 
+        this->getVoltCurrent(menuId==0, "DC Output");
+        menuId = 1;
+
+        break;
+      }
+  }
+
   this->enterStatus = 0;
   insideMenu = true;
 }
+
+void graphics::getVoltCurrent(int init, char* title)
+{
+  
+  if (init)
+  {
+    tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
+    //dc output
+    int16_t x, y;
+    uint16_t w, h;
+
+    tft.setFont(&FreeSansBold12pt7b);
+    tft.setCursor(10, 25);
+    tft.println(title);
+    tft.fillRect(10,30,this->battx-30,5, ILI9341_WHITE);
+  
+    tft.setCursor(10, 65);
+    tft.println("Voltage");
+
+    tft.setCursor(10, 130);
+    tft.println("Current");
+
+
+    // tft.getTextBounds("12v", 10, 55, &x, &y, &w, &h);
+    // tft.fillRect(x - 5, y - 5, w + 10, h + 10, ILI9341_GREEN);
+
+    // tft.println("12v");
+
+    // tft.setFont(&FreeSansBold12pt7b);
+    // tft.setCursor(10, 100);
+    // tft.println("Current");
+
+    // tft.setFont(&FreeSans12pt7b);
+    // tft.setCursor(10, 130);
+    // tft.println("12a");
+
+    // tft.setFont(&FreeSansBold12pt7b);
+    // tft.setCursor(10, 200);
+    // tft.println("Start");
+
+    // tft.setCursor(100, 200);
+    // tft.println("Cancel");
+  }
+}
+
 void graphics::batteryStatus(char *buff)
 {
   tft.setFont(&FreeSans12pt7b);

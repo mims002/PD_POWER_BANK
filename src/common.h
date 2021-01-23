@@ -58,6 +58,7 @@ public:
     void batteryStatus(char *buff);
     void setBatteryLevel(int bat, int percentage);
     void drawBattery(int bat);
+    void getVoltCurrent(int init, char* title);
     void renderMenu();
     void setPowerLevel(int offsetY, char *value, int x = 125, int y = 0);
 };
