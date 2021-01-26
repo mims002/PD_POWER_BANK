@@ -47,16 +47,18 @@ charger::charger()
     digitalWrite(dpot_dc_cs, HIGH);
 
     pinMode(dc_swt, OUTPUT);
-    digitalWrite(dc_swt, on);
+    digitalWrite(dc_swt, off);
 
     pinMode(usb_swt, OUTPUT);
-    digitalWrite(usb_swt, on);
+    digitalWrite(usb_swt, off);
 
-    pinMode(dc_mode, OUTPUT);
-    digitalWrite(dc_mode, modeDischarge);
+    pinMode(dc_status_pin, OUTPUT);
+    digitalWrite(dc_status_pin, modeDischarge);
 
-    pinMode(usb_mode, OUTPUT);
-    digitalWrite(usb_mode, modeDischarge);
+    pinMode(usb_status_pin, OUTPUT);
+    digitalWrite(usb_status_pin, modeDischarge);
+
+    pinMode(dcVoltReadPin, INPUT);
 
     // pinMode(bat_cur, INPUT);
 
@@ -73,37 +75,45 @@ void charger::setV(int readVpin, int readCpin, int fPin, double v, double cur)
 double charger::readV(int pin, double ratio, double offset)
 {
     int read = analogRead(pin);
-    return (read * (3.27 / 4096.0) * ratio + offset);
+    // Serial.println(read);
+
+    return (read * (3.27 / 1023.0) * ratio + offset);
 }
 
 void charger::runState()
 {
-    // if (charging)
-    // {
-    //     //check voltage and current
-    // }
+    // Serial.println(readV(dcVoltReadPin, vOffsetDC,0));
+
+    this->checkDc();
 }
 
 void charger::checkDc()
 {
-    if (!dc.power) //turns it off first
+
+    if (dc.power != on) //turns it off first
         digitalWrite(dc_swt, off);
+    else
+    {
+        //set the correct state
+        digitalWrite(dc_status_pin, source);
+        digitalWrite(dc_swt, on);
+    }
 
-    //set the correct state
-    digitalWrite(dc_mode, source);
-
-    if (dc_mode == source)
+    if (dc.status == source)
     {
         double cur = readCurrent(dc_cur_pin);
-        if (cur >= dc.max_cur)
-            digitalWrite(dc_swt, off);
+        // if (cur >= dc.max_cur)
+        //     digitalWrite(dc_swt, off);
 
-        double v = readV(dcVoltReadPin, vOffsetDC, 0);
-        if (v >= dc.v)
-            digitalWrite(dc_swt, off);
+        double v = readV(dcVoltReadPin, vOffsetUsb, 0);
 
-        if (v < dc.v - 1);
+        if ((v - dc.v) >= 0.1 && dc.r > 0)
+            setR(dpot_dc_cs, --dc.r);
+
+        if ((v - dc.v) <= -0.1 && dc.r < 510)
+            setR(dpot_dc_cs, ++dc.r);
         //increase power
+        
     }
 }
 
@@ -134,7 +144,6 @@ void charger::sinkBatt()
         setR(sinked->dpot_cs, --(sinked->r));
     }
 
-   
     //update charger current
     //balance
 }
@@ -167,7 +176,7 @@ void charger::digitalPotWrite(int cs, int address, int value)
     digitalWrite(cs, LOW);
 
     unsigned int fomatted = address << 4;
-    // Serial.print(fomatted, BIN);
+    Serial.print(fomatted, BIN);
     Serial.print("   Value: ");
     Serial.println(value);
     //  send in the address and value via SPI:
@@ -182,4 +191,21 @@ void charger::digitalPotWrite(int cs, int address, int value)
     digitalWrite(cs, HIGH);
     // release control of the SPI port
     SPI.endTransaction();
+}
+
+void charger::startDCIn()
+{
+    Serial.println("turning on Dc");
+    dc.status = source;
+    dc.max_cur = this->dcC;
+    dc.power = on;
+}
+
+void charger::startDCOut()
+{
+    Serial.println("turning on Dc out");
+    dc.status = source;
+    dc.max_cur = this->dcC;
+    dc.v = this->dcV;
+    dc.power = on;
 }

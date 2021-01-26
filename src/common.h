@@ -52,15 +52,18 @@ public:
     int batty = 0 + battTh;
     int battTx = battx + battw / 2 - battTw / 2;
 
-    int enterStatus=0;
-    int knobStatus=0;
+    int enterStatus = 0;
+    int knobStatus = 0;
 
     void batteryStatus(char *buff);
     void setBatteryLevel(int bat, int percentage);
     void drawBattery(int bat);
-    void getVoltCurrent(int init, char* title);
+    void getVoltCurrent(char *title, float *v, float *c);
     void renderMenu();
+    void graphics::set(char *title, float *v, float *c,  int i);
+    void graphics::router(int i);
     void setPowerLevel(int offsetY, char *value, int x = 125, int y = 0);
+    
 };
 
 class usbC
@@ -80,11 +83,11 @@ public:
 
     const int con_bat = 0;
     const int con_usbc_input = 0;
-    const int dc_swt = 27;
-    const int usb_swt = 26;
+    const int dc_swt = 26;
+    const int usb_swt = 27;
 
-    const int dc_mode = 29;
-    const int usb_mode = 30;
+    const int dc_status_pin = 29;
+    const int usb_status_pin = 30;
     const int bat_cur_pin = 16;
     const int usb_cur_pin = 16;
     const int dc_cur_pin = 16;
@@ -93,6 +96,9 @@ public:
 
     int dcVoltReadPin = 39;
     int usbCVoltReadPin = 40;
+
+    float dcV = 0;
+    float dcC = 0;
 
     double vOffsetDC = calcOffset(100400., 14940.);
     double vOffsetUsb = calcOffset(100000., 15000.);
@@ -112,6 +118,9 @@ public:
     void charger::checkUsb();
     void charger::checkDc();
     void charger::sinkBatt();
+    void charger::startDCIn();
+    void charger::startDCOut();
+
 };
 
 struct objStoreStruct

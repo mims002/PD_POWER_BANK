@@ -34,12 +34,13 @@
 int batteryY = 5;
 int batteryPercentY = 20;
 boolean insideMenu = false;
+boolean insideSubMenu = false;
 extern objStoreStruct objStore;
 extern struct usb_pd_ob usb_pd_ob1[CONFIG_USB_PD_PORT_COUNT];
 uint16_t batteryColor = ILI9341_WHITE;
 int pos = 0;
 int menuId = 0;
-int subMenuPos=0;
+int subMenuPos = 0;
 
 enum spaces
 {
@@ -168,8 +169,9 @@ void graphics::renderMenu()
   {
     //main menu
     String menuOptions[] = {
-        "Set DC Output",
-        "Set DC Input",
+        "Set DC",
+        "DC Out On",
+        "DC In On",
         "Set Max Battery",
         "Set Battery",
         "Go Back",
@@ -205,32 +207,64 @@ void graphics::renderMenu()
   }
 
   //display sub-menu
-  if (this->enterStatus)
+  if (this->enterStatus || menuId != 0)
   {
-    if (menuId == 0) //clear out main menu
+    if (menuId == 0){ //clear out main menu
+      menuId = pos+1;
+      pos=0;
+    }
 
-      //go into new menu
-      switch (pos)
-      {
+    //go into new menu
+    switch (menuId)
+    {
 
-      case 0:
+    case 1:
+      this->getVoltCurrent("DC Output", &objStore.charger.dcV, &objStore.charger.dcC);
+      break;
+    case 2: //battery out
+      this->set("DC Out On", &objStore.charger.dcV, &objStore.charger.dcC, 1);
+      break;
+    }
 
-      case 1: //battery out 
-        this->getVoltCurrent(menuId==0, "DC Output");
-        menuId = 1;
-
-        break;
-      }
+    pos = 0;
   }
 
   this->enterStatus = 0;
   insideMenu = true;
 }
 
-void graphics::getVoltCurrent(int init, char* title)
-{
+int subMenu = -1;
+
+void graphics::router(int i){
+  switch (i)
+  {
+  case 1:
+    objStore.charger.startDCOut();
+    break;
   
-  if (init)
+  default:
+    break;
+  }
+}
+
+void graphics::getVoltCurrent(char *title, float *v, float *c)
+{
+
+  if (this->enterStatus != 0)
+  {
+    subMenu++;
+  }
+  Serial.println(subMenu);
+  if (subMenu == 3)
+  {
+    menuId = 0;
+    subMenu = -1;
+    this->enterStatus=0;
+    this->renderMenu();
+    return;
+  }
+
+  if (subMenu == 0)
   {
     tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
     //dc output
@@ -240,35 +274,101 @@ void graphics::getVoltCurrent(int init, char* title)
     tft.setFont(&FreeSansBold12pt7b);
     tft.setCursor(10, 25);
     tft.println(title);
-    tft.fillRect(10,30,this->battx-30,5, ILI9341_WHITE);
-  
+    tft.fillRect(10, 30, this->battx - 30, 5, ILI9341_WHITE);
+
+    tft.setCursor(10, 65);
+    tft.println("Voltage");
+
+    tft.setCursor(10, 130);
+    tft.println("Current");
+  }
+
+  if (subMenu == 1)
+  {
+    tft.fillRect(30, 75, 75, 35, ILI9341_GREEN);
+    *v += pos / 2.;
+  }
+  else
+    tft.fillRect(30, 75, 75, 35, ILI9341_BLACK);
+
+  if (subMenu == 2)
+  {
+    tft.fillRect(30, 140, 75, 35, ILI9341_GREEN);
+    *c += pos / 2.;
+  }
+  else
+    tft.fillRect(30, 140, 75, 35, ILI9341_BLACK);
+
+  tft.setCursor(40, 98);
+  tft.println(*v);
+
+  tft.setCursor(40, 165);
+  tft.println(*c);
+}
+
+void graphics::set(char *title, float *v, float *c, int i)
+{
+  if (subMenu == -1)
+  {
+
+    tft.fillRect(0, 0, this->battx, 240, ILI9341_BLACK);
+    //dc output
+    int16_t x, y;
+    uint16_t w, h;
+
+    tft.setFont(&FreeSansBold12pt7b);
+    tft.setCursor(10, 25);
+    tft.println(title);
+    tft.fillRect(10, 30, this->battx - 30, 5, ILI9341_WHITE);
+
     tft.setCursor(10, 65);
     tft.println("Voltage");
 
     tft.setCursor(10, 130);
     tft.println("Current");
 
+    tft.setCursor(40, 98);
+    tft.println(*v);
 
-    // tft.getTextBounds("12v", 10, 55, &x, &y, &w, &h);
-    // tft.fillRect(x - 5, y - 5, w + 10, h + 10, ILI9341_GREEN);
+    tft.setCursor(40, 165);
+    tft.println(*c);
 
-    // tft.println("12v");
-
-    // tft.setFont(&FreeSansBold12pt7b);
-    // tft.setCursor(10, 100);
-    // tft.println("Current");
-
-    // tft.setFont(&FreeSans12pt7b);
-    // tft.setCursor(10, 130);
-    // tft.println("12a");
-
-    // tft.setFont(&FreeSansBold12pt7b);
-    // tft.setCursor(10, 200);
-    // tft.println("Start");
-
-    // tft.setCursor(100, 200);
-    // tft.println("Cancel");
+    subMenu++;
+    this->enterStatus = 0;
   }
+
+  subMenu += pos;
+  subMenu = abs(subMenu % 2);
+
+  if (this->enterStatus == 1)
+  {
+    if (subMenu == 0)
+    {
+      this->router(i);
+    }
+    menuId = 0;
+    subMenu = -1;
+    this->enterStatus=0;
+    this->renderMenu();
+    return;
+  }
+
+  if (subMenu == 0)
+    tft.fillRect(10, 180, 60, 30, ILI9341_GREEN);
+  else
+    tft.fillRect(10, 180, 60, 30, ILI9341_BLACK);
+
+  if (subMenu == 1)
+    tft.fillRect(100, 180, 90, 30, ILI9341_GREEN);
+  else
+    tft.fillRect(100, 180, 90, 30, ILI9341_BLACK);
+
+  tft.setFont(&FreeSansBold12pt7b);
+  tft.setCursor(10, 200);
+  tft.println("Start");
+
+  tft.setCursor(100, 200);
+  tft.println("Cancel");
 }
 
 void graphics::batteryStatus(char *buff)

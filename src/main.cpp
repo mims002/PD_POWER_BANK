@@ -87,5 +87,5 @@ void loop()
     // }
 
     // toggle = !toggle;
-    // objStore.charger.runState();
+    objStore.charger.runState();
 }
